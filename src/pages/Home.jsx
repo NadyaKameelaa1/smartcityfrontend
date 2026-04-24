@@ -1,0 +1,1049 @@
+// src/pages/Home.jsx
+import { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import WisataCard from '../components/WisataCard';
+import SmartSearchBar from '../components/SmartSearchBar';
+import PengumumanCard from '../components/PengumumanCard';
+import PelayananCard from '../components/PelayananCard';
+import EventCard from '../components/EventCard';
+import {
+    wisataData,
+    beritaData,
+    pengumumanData,
+    eventData,
+    pelayananData,
+    statistikData,
+    profilData,
+} from '../data/mockData';
+import MiniMap from '../components/MiniMap';
+import api from '../api/axios';
+
+// ─── Helpers ────────────────────────────────────────────────
+const formatRupiah = (n) => 'Rp ' + n.toLocaleString('id-ID');
+const formatTanggal = (str) => {
+    const d = new Date(str);
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+const formatTanggalEvent = (str) => {
+    const d = new Date(str);
+    return {
+        day: d.getDate(),
+        month: d.toLocaleDateString('id-ID', { month: 'short' }),
+    };
+};
+
+// ─── Fade-in hook ────────────────────────────────────────────
+function useFadeIn() {
+    const ref = useRef(null);
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const obs = new IntersectionObserver(
+            ([entry]) => { if (entry.isIntersecting) { el.classList.add('visible'); obs.unobserve(el); } },
+            { threshold: 0.1, rootMargin: '0px 0px -60px 0px' }
+        );
+        obs.observe(el);
+        return () => obs.disconnect();
+    }, []);
+    return ref;
+}
+
+// ─── Section wrapper with fade ───────────────────────────────
+function FadeIn({ children, className = '' }) {
+    const ref = useFadeIn();
+    return <div ref={ref} className={`fade-in-up ${className}`}>{children}</div>;
+}
+
+function HeroSection() {
+    const navigate = useNavigate();
+    const [keyword, setKeyword] = useState('');
+    const [activeKat, setActiveKat] = useState('semua');
+    const kategori = ['semua', 'wisata', 'berita', 'event', 'pelayanan', 'pengumuman'];
+
+    const handleSearch = () => {
+        if (!keyword.trim()) return;
+        navigate(`/search?q=${encodeURIComponent(keyword)}&cat=${activeKat}`);
+    };
+    
+
+    return (
+        <section className="hero" id="home">
+            <div className="hero-video-container">
+                <video className="hero-video" autoPlay muted loop playsInline>
+                    <source src="/videos/Purbalingga.mp4" type="video/mp4" />
+                </video>
+                <div className="hero-video-overlay" />
+            </div>
+            <div className="hero-gradient" />
+            <div className="hero-pattern" />
+
+            <div className="container" style={{ position: 'relative', zIndex: 2, width: '100%' }}>
+                <div className="hero-content" style={{ textAlign: 'center', maxWidth: 900, margin: '0 auto' }}>
+                    <FadeIn>
+                    <div className="hero-badge" style={{ display: 'inline-flex', marginBottom: 20 }}>
+                        <i className="fas fa-star" /> Kabupaten Purbalingga — Jawa Tengah
+                    </div>
+
+                    <div style={{ marginBottom: 40 }}>
+                        <h1 className="hero-title" style={{ fontSize: 'clamp(40px,8vw,80px)', letterSpacing: 1 }}>
+                            Purbalingga
+                        </h1>
+                        <div className="title-sub-row" style={{ position: 'relative' }}>
+                            <div className="title-line title-line-left" />
+                            <span className="title-city">Smart City</span>
+                            <div className="title-line title-line-right" />
+                        </div>
+                    </div>
+                    <SmartSearchBar />
+                    <div className="hero-actions" style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <a href="#profil" className="btn btn-primary" style={{ background: 'var(--teal-600)', color: 'white', padding: '12px 28px', borderRadius: 50, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                            <i className="fas fa-compass" /> Jelajahi Purbalingga
+                        </a>
+                        <a href="#wisata" className="btn" style={{ background: 'rgba(255,255,255,.12)', color: 'white', border: '1px solid rgba(255,255,255,.2)', padding: '12px 28px', borderRadius: 50, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                            <i className="fas fa-map-marked-alt" /> Destinasi Wisata
+                        </a>
+                    </div>
+                    </FadeIn>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROFIL
+// ═══════════════════════════════════════════════════════════════
+function ProfilSection() {
+    const [activeTab, setActiveTab] = useState('tentang');
+    const tabs = [
+        { key: 'tentang',  label: 'Tentang Purbalingga', icon: 'fa-info-circle' },
+        { key: 'sejarah',  label: 'Sejarah',             icon: 'fa-scroll' },
+        { key: 'visimisi', label: 'Visi & Misi',         icon: 'fa-bullseye' },
+        { key: 'pejabat',  label: 'Profil Pejabat',      icon: 'fa-user-tie' },
+    ];
+
+    return (
+        <section className="profil-section section" id="profil">
+            <div className="container">
+                <FadeIn>
+                    <div className="section-header">
+                        <div className="section-label"><i className="fas fa-city" /> Profil Kota</div>
+                        <h2 className="section-title">Mengenal Kabupaten Purbalingga</h2>
+                        <p className="section-desc">Informasi lengkap tentang Kabupaten Purbalingga, mulai dari sejarah, visi misi, hingga profil pejabat daerah.</p>
+                    </div>
+                </FadeIn>
+
+                <FadeIn>
+                    <div className="profil-tabs">
+                        {tabs.map((t) => (
+                            <button
+                                key={t.key}
+                                className={`profil-tab${activeTab === t.key ? ' active' : ''}`}
+                                onClick={() => setActiveTab(t.key)}
+                            >
+                                <i className={`fas ${t.icon}`} /> {t.label}
+                            </button>
+                        ))}
+                    </div>
+                </FadeIn>
+
+                {activeTab === 'tentang'  && <TabTentang />}
+                {activeTab === 'sejarah'  && <TabSejarah />}
+                {activeTab === 'visimisi' && <TabVisiMisi />}
+                {activeTab === 'pejabat'  && <TabPejabat />}
+            </div>
+        </section>
+    );
+}
+
+function TabTentang() {
+    const facts = [
+        { label: 'Ibu Kota',         value: 'Kota Purbalingga',    icon: 'fa-map-marker-alt' },
+        { label: 'Luas Wilayah',     value: '777,65 km²',          icon: 'fa-ruler-combined' },
+        { label: 'Jumlah Kecamatan', value: '18 Kecamatan',        icon: 'fa-building' },
+        { label: 'Jumlah Desa/Kel.', value: '239 Desa/Kelurahan',  icon: 'fa-flag' },
+        { label: 'Kode Pos',         value: '53300–53392',         icon: 'fa-mail-bulk' },
+        { label: 'Bahasa',           value: 'Banyumasan, Indonesia',icon: 'fa-language' },
+    ];
+    return (
+        <FadeIn>
+            <div className="tentang-hero-style">
+                <div className="tentang-hero-bg" style={{ backgroundImage: "url('/img/tentang/tentang-pbg.jpg')" }} />
+                <div className="tentang-hero-gradient" />
+                <div className="tentang-hero-pattern" />
+                <div className="tentang-content-wrapper">
+                    <div className="tentang-left">
+                        <div className="tentang-badge"><i className="fas fa-info-circle" /> Tentang Kabupaten Purbalingga</div>
+                        <h2>Kota Purbalingga</h2>
+                        <p>Kabupaten Purbalingga adalah sebuah kabupaten di Provinsi Jawa Tengah, Indonesia. Berbatasan dengan Kabupaten Banjarnegara di selatan dan timur, Kabupaten Pemalang di utara, Kabupaten Banyumas di barat.</p>
+                        <p>Purbalingga dikenal dengan berbagai produk unggulan seperti bulu mata palsu, knalpot, dan rambut palsu yang dipasarkan ke mancanegara.</p>
+                        <p>Kota ini berkembang pesat dengan berbagai infrastruktur modern, termasuk Bandara Jenderal Besar Soedirman.</p>
+                    </div>
+                    <div className="tentang-right">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+                            <div style={{ width: 40, height: 40, background: 'var(--teal-500)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <i className="fas fa-chart-pie" style={{ color: 'white' }} />
+                            </div>
+                            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'white', margin: 0 }}>Fakta Singkat</h3>
+                        </div>
+                        <div className="tentang-facts-grid">
+                            {facts.map((f) => (
+                                <div className="tentang-fact-item" key={f.label}>
+                                    <div className="tentang-fact-label"><i className={`fas ${f.icon}`} style={{ marginRight: 5 }} />{f.label}</div>
+                                    <div className="tentang-fact-value">{f.value}</div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="tentang-description">
+                            <i className="fas fa-quote-left" style={{ color: 'var(--teal-300)', marginRight: 8 }} />
+                            Purbalingga terus berkembang menjadi kota smart city dengan tetap mempertahankan kearifan lokal dan budaya Banyumasan.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </FadeIn>
+    );
+}
+
+function TabSejarah() {
+    const items = [
+        { tahun: '1740-1760',     judul: 'Masa Kyai Arsantaka',              desc: 'Kyai Arsantaka menjadi Demang di Kademangan Pagendolan, berjasa dalam Perang Jenar.' },
+        { tahun: 'Akhir Abad 18', judul: 'Kyai Arsayuda Menjadi Tumenggung', desc: 'Kyai Arsayuda diangkat menjadi Tumenggung Karanglewas bergelar Raden Tumenggung Dipayuda III.' },
+        { tahun: '18 Des 1830',   judul: 'Hari Jadi Kabupaten Purbalingga',  desc: 'Pusat pemerintahan dipindah ke Desa Purbalingga. Ditetapkan melalui Perda No. 15 Tahun 1996.' },
+        { tahun: '1831',          judul: 'Era Kolonial Belanda',             desc: 'Purbalingga ditetapkan sebagai kabupaten resmi dengan sistem pemerintahan terstruktur.' },
+        { tahun: '1945',          judul: 'Kemerdekaan Indonesia',            desc: 'Purbalingga menjadi bagian dari Republik Indonesia.' },
+        { tahun: '1980-an',       judul: 'Perkembangan Industri',            desc: 'Industri bulu mata palsu, knalpot, dan rambut palsu mulai berkembang pesat.' },
+        { tahun: '2016',          judul: 'Bandara Jend. Besar Soedirman',   desc: 'Peresmian bandara pertama untuk wilayah Jawa Tengah bagian selatan.' },
+    ];
+
+    return (
+        <FadeIn>
+            {/* Timeline — tanpa item "Kini" */}
+            <div className="sejarah-timeline">
+                {items.map((item, i) => (
+                    <div className="timeline-item" key={i}>
+                        {i % 2 === 0 ? (
+                            <>
+                                <div className="timeline-content">
+                                    <div className="timeline-year">{item.tahun}</div>
+                                    <div className="timeline-title">{item.judul}</div>
+                                    <div className="timeline-desc">{item.desc}</div>
+                                </div>
+                                <div className="timeline-dot"><div className="timeline-dot-inner" /></div>
+                                <div className="timeline-spacer" />
+                            </>
+                        ) : (
+                            <>
+                                <div className="timeline-spacer" />
+                                <div className="timeline-dot"><div className="timeline-dot-inner" /></div>
+                                <div className="timeline-content">
+                                    <div className="timeline-year">{item.tahun}</div>
+                                    <div className="timeline-title">{item.judul}</div>
+                                    <div className="timeline-desc">{item.desc}</div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                ))}
+            </div>
+
+            {/* Titik penutup timeline */}
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '-12px 0 28px', position: 'relative', zIndex: 2 }}>
+                <div style={{
+                    width: 24, height: 24, background: 'var(--teal-600)',
+                    borderRadius: '50%', border: '4px solid white',
+                    boxShadow: '0 0 0 4px var(--teal-200)',
+                }} />
+            </div>
+
+            {/* Closing banner "Kini" */}
+            <div style={{
+                background: 'var(--teal-950)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '32px 36px',
+                display: 'grid',
+                gridTemplateColumns: '1fr auto',
+                gap: 32,
+                alignItems: 'center',
+            }}>
+                <div>
+                    <div style={{ fontSize: 11, letterSpacing: 2, color: 'var(--teal-300)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 6, height: 6, background: 'var(--teal-400)', borderRadius: '50%' }} />
+                        Kini · Kota Smart &amp; Berbudaya
+                    </div>
+                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'white', marginBottom: 10 }}>
+                        Purbalingga Hari Ini
+                    </h3>
+                    <p style={{ fontSize: 14, color: 'rgba(255,255,255,.7)', lineHeight: 1.7, maxWidth: 460 }}>
+                        Purbalingga terus bertransformasi menjadi kota modern berbasis smart city, dengan tetap mempertahankan kearifan lokal dan budaya Banyumasan yang kaya.
+                    </p>
+                </div>
+
+                {/* Stats ringkas */}
+                <div style={{ display: 'flex', gap: 16, flexShrink: 0 }}>
+                    {[
+                        { num: '18',   label: 'Kecamatan' },
+                        { num: '239',  label: 'Desa' },
+                        { num: '920rb', label: 'Penduduk' },
+                    ].map((s) => (
+                        <div key={s.label} style={{
+                            textAlign: 'center', padding: '14px 18px',
+                            background: 'rgba(255,255,255,.07)',
+                            border: '1px solid rgba(255,255,255,.1)',
+                            borderRadius: 12,
+                        }}>
+                            <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, color: 'var(--teal-300)', lineHeight: 1 }}>
+                                {s.num}
+                            </div>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,.5)', letterSpacing: 1, textTransform: 'uppercase', marginTop: 6 }}>
+                                {s.label}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </FadeIn>
+    );
+}
+
+function TabVisiMisi() {
+    const misi = [
+        'Pemberdayaan Ekonomi Lokal Melalui Pengembangan UMKM dan Modernisasi Sektor Pertanian',
+        'Peningkatan Infrastruktur untuk Meningkatkan Konektivitas Ekonomi',
+        'Digitalisasi Pelayanan Publik untuk Meningkatkan Efisiensi dan Transparansi',
+        'Peningkatan Kualitas Pendidikan dan Kesehatan untuk Membangun SDM yang Unggul',
+    ];
+    return (
+        <FadeIn>
+            <div className="visi-misi-grid">
+                <div className="visi-card visi-bg">
+                    <div className="visi-card-icon"><i className="fas fa-eye" /></div>
+                    <h3>Visi</h3>
+                    <p className="visi-text"><b>"Akselerasi Pembangunan Kolaboratif untuk Purbalingga Mandiri dan Sejahtera"</b></p>
+                    <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid rgba(255,255,255,.15)' }}>
+                        <p style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', lineHeight: 1.7 }}>Visi ini mencerminkan tekad Kabupaten Purbalingga untuk mewujudkan masyarakat yang sejahtera secara materiil dan spiritual.</p>
+                    </div>
+                </div>
+                <div className="visi-card misi-bg">
+                    <div className="visi-card-icon"><i className="fas fa-tasks" /></div>
+                    <h3>Misi</h3>
+                    <ul className="misi-list">
+                        {misi.map((m, i) => (
+                            <li key={i}><i className="fas fa-check-circle" /> {m}</li>
+                        ))}
+                    </ul>
+                </div>
+            </div>
+        </FadeIn>
+    );
+}
+
+function TabPejabat() {
+    const pejabat = [profilData.bupati, profilData.wakil];
+    return (
+        <FadeIn>
+            <div className="pejabat-grid">
+                {pejabat.map((p) => (
+                    <div className="pejabat-card" key={p.nama}>
+                        <div className="pejabat-photo">
+                            <img src={p.foto} alt={p.nama} style={{ width: '100%', height: '100%', objectFit: 'cover', aspectRatio: '3/4' }} />
+                        </div>
+                        <div className="pejabat-info">
+                            <div className="pejabat-jabatan">{p.jabatan}</div>
+                            <div className="pejabat-name">{p.nama}</div>
+                            <div className="pejabat-periode">{p.periode}</div>
+                            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 12, lineHeight: 1.6 }}>{p.deskripsi}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </FadeIn>
+    );
+}
+
+function MengenalSection() {
+    return (
+        <section className="mengenal-section section" id="mengenal">
+            <div className="container">
+                <FadeIn>
+                    <div className="mengenal-card">
+                        {/* Kiri: Mini Map */}
+                        <div className="mengenal-left" style={{ padding: 0, overflow: 'hidden', position: 'relative', minHeight: 480 }}>
+                            <MiniMap />
+                            <div style={{ 
+                                position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 500, 
+                                background: 'linear-gradient(to top, rgba(10,29,61,.95) 0%, rgba(10,29,61,.6) 50%, transparent 100%)', 
+                                padding: '40px 28px 24px' 
+                            }}>
+                                <div style={{ 
+                                    fontSize: 10, letterSpacing: 4, textTransform: 'uppercase', 
+                                    color: 'white', fontWeight: 700, marginBottom: 8,
+                                    display: 'flex', alignItems: 'center', gap: 8
+                                }}>
+                                    <div style={{ width: 20, height: 1, background: 'white' }} />
+                                    Smart City
+                                    <div style={{ width: 20, height: 1, background: 'white' }} />
+                                </div>
+                                <div style={{ 
+                                    fontFamily: 'var(--font-display)', 
+                                    fontSize: 'clamp(16px, 2.5vw, 22px)',  // ← responsive, tidak nabrak
+                                    color: 'white', fontWeight: 700, marginBottom: 12,
+                                    lineHeight: 1.3,
+                                    textShadow: '0 2px 12px rgba(0,0,0,.5)'  // ← shadow biar lebih terbaca
+                                }}>
+                                    Purbalingga Digital & Terhubung
+                                </div>
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                                    {[['fa-video','CCTV Live'],['fa-map','Peta Informasi'],['fa-bell','Notifikasi']].map(([ico, lbl]) => (
+                                        <div key={lbl} style={{ 
+                                            display: 'flex', alignItems: 'center', gap: 6, 
+                                            background: 'rgba(255,255,255,.1)', 
+                                            padding: '6px 10px', borderRadius: 6, 
+                                            backdropFilter: 'blur(8px)',
+                                            border: '1px solid rgba(255,255,255,.12)'
+                                        }}>
+                                            <i className={`fas ${ico}`} style={{ color: 'var(--teal-300)', fontSize: 11 }} />
+                                            <span style={{ fontSize: 11, color: 'rgba(255,255,255,.85)', fontWeight: 500 }}>{lbl}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <Link to="/peta" style={{ position: 'absolute', inset: 0, zIndex: 600, cursor: 'pointer' }} title="Buka Peta Selengkapnya" />
+                        </div>
+
+                        {/* Kanan: Teks */}
+                        <div className="mengenal-right">
+                            <div className="section-label"><i className="fas fa-map-marked-alt" /> Kenali Lebih Dekat</div>
+                            <h2 className="mengenal-right-title">Purbalingga<br />Smart City</h2>
+                            <p className="mengenal-right-desc">Platform Smart City Purbalingga mengintegrasikan berbagai layanan dan informasi kota dalam satu ekosistem digital yang cerdas dan mudah diakses.</p>
+                            <p className="mengenal-right-desc" style={{ marginBottom: 32 }}>Dari Gua Lawa yang eksotis hingga Owabong yang populer, dari kuliner soto kriyik hingga industri bulu mata kelas dunia, semua ada di Purbalingga.</p>
+                            <Link to="/peta" className="btn btn-primary"><i className="fas fa-map" /> Lihat Peta Selengkapnya</Link>
+                        </div>
+                    </div>
+                </FadeIn>
+            </div>
+        </section>
+    );
+}
+
+// ── Ganti WisataSection di Home.jsx ─────────────────────────
+// Tambahkan useNavigate ke import di atas:
+// import { Link, useNavigate } from 'react-router-dom';
+
+function WisataSection() {
+    const [wisataPreview, setWisataPreview] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        // Karena kamu pakai 'api' dari axios.js, baseURL biasanya sudah ada /api
+        // Jadi cukup tulis '/wisata' saja
+        api.get('/wisata')
+            .then(res => {
+                // Pastikan struktur response Laravel kamu benar (res.data atau res.data.data)
+                const data = res.data.data || res.data;
+                setWisataPreview(data.slice(0, 6));
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Gagal ambil data wisata:", err);
+                setLoading(false);
+            });
+    }, []);
+
+    return (
+        <section className="wisata-section section" id="wisata">
+            <div className="container">
+                <FadeIn>
+                    <div className="section-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 40 }}>
+                        <div>
+                            <div className="section-label"><i className="fas fa-mountain" /> Pariwisata</div>
+                            <h2 className="section-title">Destinasi Wisata Unggulan</h2>
+                            <p className="section-desc">Jelajahi keindahan alam dan budaya Purbalingga.</p>
+                        </div>
+                        <Link to="/wisata" className="btn btn-outline" style={{ flexShrink: 0 }}>
+                            Lihat Semua <i className="fas fa-arrow-right" />
+                        </Link>
+                    </div>
+                </FadeIn>
+
+                <div className="wisata-grid">
+                    {loading ? (
+                        <p>Memuat data wisata...</p>
+                    ) : wisataPreview.length > 0 ? (
+                        // GANTI 'wisataData' MENJADI 'wisataPreview'
+                        wisataPreview.map((w) => (
+                            <FadeIn key={w.id}>
+                                <WisataCard w={w} />
+                            </FadeIn>
+                        ))
+                    ) : (
+                        <p>Tidak ada data wisata.</p>
+                    )}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BERITA
+// ═══════════════════════════════════════════════════════════════
+function BeritaSection() {
+    const [berita, setBerita] = useState([]);
+    const [filter, setFilter] = useState('semua');
+    const [loading, setLoading] = useState(true);
+    const BASE_IMAGE_URL = 'http://192.168.40.128:8000/storage/';
+
+    useEffect(() => {
+        api.get('/berita')
+            .then(res => {
+                setBerita(res.data.data);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error(err);
+                setLoading(false);
+            });
+    }, []);
+
+    const filters = [
+        { key: 'semua',     label: 'Semua Berita' },
+        { key: 'kecamatan', label: 'Berita Kecamatan' },
+        { key: 'desa',      label: 'Berita Desa' },
+    ];
+
+    const featured = berita.find((b) => b.featured === 1 || b.featured === true);
+    const filtered = berita.filter((b) => {
+        const isFeatured = Number(b.featured) === 1;
+        return !isFeatured && (filter === 'semua' || b.kategori === filter);
+    });
+    return (
+        <section className="berita-section section" id="berita">
+            <div className="container">
+                <FadeIn>
+                    <div className="section-header">
+                        <div className="section-label"><i className="fas fa-newspaper" /> Informasi Terkini</div>
+                        <h2 className="section-title">Berita Purbalingga</h2>
+                    </div>
+                </FadeIn>
+
+                <FadeIn>
+                    <div className="berita-filter">
+                        {filters.map((f) => (
+                            <button key={f.key} className={`filter-btn${filter === f.key ? ' active' : ''}`} onClick={() => setFilter(f.key)}>
+                                {f.label}
+                            </button>
+                        ))}
+                    </div>
+                </FadeIn>
+
+                <div className="berita-grid">
+                    {featured && (
+                        <FadeIn>
+                            <Link to={`/berita/${featured.slug}`} className="berita-featured" style={{ textDecoration: 'none', display: 'block' }}>
+                                {/* ↓ Ubah aspect ratio gambar jadi lebih kecil */}
+                                <img
+                                    src={`${BASE_IMAGE_URL}${featured.thumbnail}`}
+                                    alt={featured.judul}
+                                    className="berita-featured-img"
+                                    style={{ aspectRatio: '16/5', objectFit: 'cover' }}
+                                />
+                                <div className="berita-featured-body">
+                                    <span className={`berita-tag tag-${featured.kategori}`}>
+                                        <i className="fas fa-tag" /> {featured.kategori}
+                                    </span>
+                                    <h3 className="berita-featured-title">{featured.judul}</h3>
+                                    <p className="berita-featured-desc">
+                                        {featured.konten.substring(0, 150)}...
+                                    </p>
+                                    <div className="berita-meta">
+                                        <div className="berita-meta-item">
+                                            <i className="fas fa-calendar" /> {new Date(featured.published_at).toLocaleDateString('id-ID')}
+                                        </div>
+                                        <div className="berita-meta-item"><i className="fas fa-user" /> {featured.penulis}</div>
+                                        <div className="berita-meta-item"><i className="fas fa-eye" /> {featured.views.toLocaleString('id-ID')} dibaca</div>
+                                    </div>
+                                </div>
+                            </Link>
+                        </FadeIn>
+                    )}
+
+                    <FadeIn>
+                        <div className="berita-list">
+                            {/* ↓ Maksimal 3 berita di sidebar */}
+                            {filtered.slice(0, 3).map((b) => (
+                                <Link to={`/berita/${b.slug}`} key={b.id} className="berita-item" style={{ textDecoration: 'none' }}>
+                                    <img src={`${BASE_IMAGE_URL}${b.thumbnail}`} alt={b.judul} className="berita-item-img" />
+                                    <div className="berita-item-body">
+                                        <span className={`berita-tag tag-${b.kategori}`} style={{ display: 'inline-flex', marginBottom:'5px' }}>
+                                            {b.kategori}
+                                        </span>
+                                        <div className="berita-item-title" style={{marginBottom:'10px'}}>{b.judul}</div>
+                                        <div className="berita-item-meta">
+                                            <i className="fas fa-calendar" /> {new Date(b.published_at).toLocaleDateString('id-ID')}
+                                            &nbsp;·&nbsp;
+                                            <i className="fas fa-eye" /> {b.views.toLocaleString('id-ID')} dibaca
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))}
+
+                            {/* ↓ Tombol full width dengan hover effect */}
+                            <Link
+                                to="/berita"
+                                className="berita-lihat-semua-btn"
+                            >
+                                <i className="fas fa-newspaper" />
+                                Lihat Semua Berita
+                                <i className="fas fa-arrow-right" style={{ marginLeft: 'auto' }} />
+                            </Link>
+                        </div>
+                    </FadeIn>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PELAYANAN
+// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// PELAYANAN — ganti PelayananSection yang ada di Home.jsx
+// Hanya tampilkan 8 layanan pertama (urutan terendah / featured),
+// sisanya tersedia di halaman /pelayanan
+// ═══════════════════════════════════════════════════════════════
+// Ganti PelayananSection di Home.jsx dengan ini.
+// Pastikan sudah ada import di atas Home.jsx:
+//   import PelayananCard from '../components/PelayananCard';
+// Dan hapus 'pelayananData' dari import mockData jika tidak dipakai di tempat lain.
+
+function PelayananSection() {
+    const [pelayananList, setPelayananList] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        api.get('/pelayanan')
+            .then(res => {
+                setPelayananList(res.data.data);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error('Gagal fetch pelayanan di Home:', err);
+                setLoading(false);
+            });
+    }, []);
+
+    // ✅ Fix: pakai pelayananList (dari API), bukan pelayananData (mock)
+    const visible = pelayananList.slice(0, 8);
+
+    return (
+        <section className="pelayanan-section section" id="pelayanan">
+            <div className="container">
+                <FadeIn>
+                    <div className="section-header centered">
+                        <div className="section-label" style={{ justifyContent: 'center' }}>
+                            <i className="fas fa-hands-helping" /> Layanan Digital
+                        </div>
+                        <h2 className="section-title">Pelayanan Publik Digital</h2>
+                        <p className="section-desc">
+                            Akses berbagai layanan pemerintah Purbalingga secara online, mudah, cepat, dan transparan.
+                        </p>
+                    </div>
+                </FadeIn>
+
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+                        <i className="fas fa-spinner fa-spin" style={{ marginRight: 8 }} />
+                        Memuat layanan...
+                    </div>
+                ) : (
+                    <>
+                        <div className="pelayanan-grid">
+                            {visible.map(p => (
+                                <FadeIn key={p.id}>
+                                    <PelayananCard data={p} />
+                                </FadeIn>
+                            ))}
+                        </div>
+
+                        {pelayananList.length > 8 && (
+                            <FadeIn>
+                                <div style={{ textAlign: 'center', marginTop: 36 }}>
+                                    <Link to="/pelayanan" className="btn btn-outline">
+                                        Lihat Semua Layanan ({pelayananList.length})&nbsp;
+                                        <i className="fas fa-arrow-right" />
+                                    </Link>
+                                </div>
+                            </FadeIn>
+                        )}
+                    </>
+                )}
+            </div>
+        </section>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EVENT
+// ═══════════════════════════════════════════════════════════════
+function EventSection() {
+    const [eventList, setEventList] = useState([]);
+    const [loading,   setLoading]   = useState(true);
+    
+    useEffect(() => {
+        api.get('/events')
+            .then(res => {
+                const raw = Array.isArray(res.data) ? res.data : (res.data.data ?? []);
+                const now = new Date();
+ 
+                // Hanya event published yang belum lewat, max 4 card
+                const normalized = raw
+                    .filter(e =>
+                        e.status === 'published' &&
+                        e.tanggal_mulai &&
+                        new Date(e.tanggal_mulai) >= now
+                    )
+                    .sort((a, b) => new Date(a.tanggal_mulai) - new Date(b.tanggal_mulai))
+                    .slice(0, 4)
+                    .map(e => {
+                        const jam = [e.jam_mulai, e.jam_selesai]
+                            .filter(Boolean)
+                            .map(t => t.slice(0, 5).replace(':', '.'))
+                            .join(' - ') + ' WIB';
+ 
+                        const gambar = e.thumbnail
+                            ? e.thumbnail.startsWith('http')
+                                ? e.thumbnail
+                                : `${import.meta.env.VITE_APP_URL ?? 'http://smartcitybackend-main-oqgeeg.free.laravel.cloud'}/storage/event/${e.thumbnail}`
+                            : 'https://placehold.co/640x480?text=No+Image';
+ 
+                        return {
+                            id:            e.id,
+                            slug:          e.slug,
+                            nama:          e.nama,
+                            kategori:      e.kategori,
+                            penyelenggara: e.penyelenggara ?? '-',
+                            tanggal:       e.tanggal_mulai,
+                            jam,
+                            lokasi:        e.lokasi ?? '-',
+                            gambar,
+                        };
+                    });
+ 
+                setEventList(normalized);
+            })
+            .catch(err => {
+                console.error('Gagal fetch event di Home:', err);
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+    }, []);
+    
+    return (
+        <section className="event-section section" id="event">
+            <div className="container">
+                <FadeIn>
+                    <div className="section-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 40 }}>
+                        <div>
+                            <div className="section-label"><i className="fas fa-calendar-alt" /> Agenda Kota</div>
+                            <h2 className="section-title">Event & Agenda Purbalingga</h2>
+                            <p className="section-desc">Festival budaya, acara pemerintahan, dan kegiatan wisata terkini.</p>
+                        </div>
+                        <Link to="/event" className="btn btn-outline" style={{ flexShrink: 0, borderColor: 'rgba(255,255,255,.3)', color: 'rgba(255,255,255,.8)' }}>
+                            Kalender Lengkap <i className="fas fa-arrow-right" />
+                        </Link>
+                    </div>
+                </FadeIn>
+
+                {loading ? (
+                    /* Skeleton 4 card */
+                    <div className="event-grid">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} style={{
+                                borderRadius: 'var(--radius-lg)', overflow: 'hidden',
+                                background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)',
+                                animation: 'skPulse 1.4s ease-in-out infinite',
+                                animationDelay: `${i * .1}s`,
+                            }}>
+                                <div style={{ width: '100%', aspectRatio: '4/3', background: 'rgba(255,255,255,.08)' }} />
+                                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    <div style={{ height: 11, width: '35%', borderRadius: 6, background: 'rgba(255,255,255,.1)' }} />
+                                    <div style={{ height: 15, width: '85%', borderRadius: 6, background: 'rgba(255,255,255,.1)' }} />
+                                    <div style={{ height: 15, width: '65%', borderRadius: 6, background: 'rgba(255,255,255,.1)' }} />
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+                                        {[80, 65, 55].map((w, j) => (
+                                            <div key={j} style={{ height: 10, width: `${w}%`, borderRadius: 6, background: 'rgba(255,255,255,.08)' }} />
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        <style>{`@keyframes skPulse{0%,100%{opacity:1}50%{opacity:.45}}`}</style>
+                    </div>
+                ) : eventList.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '48px 0', color: 'rgba(255,255,255,.5)' }}>
+                        <i className="fas fa-calendar-times" style={{ fontSize: 36, marginBottom: 12, display: 'block' }} />
+                        Belum ada event yang akan datang.
+                    </div>
+                ) : (
+                    <div className="event-grid">
+                        {eventList.map(e => (
+                            <FadeIn key={e.id}>
+                                <EventCard event={e} />
+                            </FadeIn>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </section>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PENGUMUMAN
+// ═══════════════════════════════════════════════════════════════
+// Ganti seluruh fungsi PengumumanSection di Home.jsx dengan ini
+// Pastikan sudah import PengumumanCard di bagian atas Home.jsx:
+//   import PengumumanCard from '../components/PengumumanCard';
+
+function PengumumanSection() {
+    const [pengumumanList, setPengumumanList] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const isExpired = (tanggal_berakhir) => {
+        if (!tanggal_berakhir) return false;
+        return new Date(tanggal_berakhir) < new Date();
+    };
+
+    useEffect(() => {
+        api.get('/pengumuman')
+            .then(res => {
+                const data = res.data.data;
+
+                const sorted = [...data].sort((a, b) => {
+                    const aExpired = isExpired(a.tanggal_berakhir);
+                    const bExpired = isExpired(b.tanggal_berakhir);
+
+                    // Aktif duluan
+                    if (!aExpired && bExpired) return -1;
+                    if (aExpired && !bExpired) return 1;
+
+                    // Tanggal terbaru
+                    const tA = new Date(a.tanggal || a.tanggal_mulai);
+                    const tB = new Date(b.tanggal || b.tanggal_mulai);
+                    if (tB - tA !== 0) return tB - tA;
+
+                    // Bobot prioritas sebagai tiebreaker
+                    const weight = { mendesak: 3, sedang: 2, umum: 1 };
+                    return (weight[b.prioritas] || 0) - (weight[a.prioritas] || 0);
+                });
+
+                setPengumumanList(sorted.slice(0, 3));
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Gagal fetch pengumuman di Home:", err);
+                setLoading(false);
+            });
+    }, []);
+
+    return (
+        <section className="pengumuman-section section" id="pengumuman">
+            <div className="container">
+                <FadeIn>
+                    <div className="section-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 40 }}>
+                        <div>
+                            <div className="section-label"><i className="fas fa-bullhorn" /> Informasi Penting</div>
+                            <h2 className="section-title">Pengumuman Terbaru</h2>
+                            <p className="section-desc">Informasi resmi dari Pemerintah Kabupaten Purbalingga yang perlu Anda ketahui.</p>
+                        </div>
+                        <Link to="/pengumuman" className="btn btn-outline" style={{ flexShrink: 0 }}>
+                            Semua Pengumuman <i className="fas fa-arrow-right" />
+                        </Link>
+                    </div>
+                </FadeIn>
+
+                <div className="pengumuman-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '30px', alignItems: 'start' }}>
+                    <FadeIn>
+                        {loading ? (
+                            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+                                <i className="fas fa-spinner fa-spin" style={{ marginRight: 8 }} />
+                                Memuat pengumuman...
+                            </div>
+                        ) : pengumumanList.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+                                <i className="fas fa-bullhorn" style={{ fontSize: 32, marginBottom: 12, display: 'block', color: 'var(--teal-200)' }} />
+                                Belum ada pengumuman.
+                            </div>
+                        ) : (
+                            // Gunakan class yang sama dengan Pengumuman.jsx
+                            <div className="pengumuman-full-list">
+                                {pengumumanList.map((p, i) => (
+                                    <PengumumanCard key={p.id} p={p} index={i} />
+                                ))}
+                            </div>
+                        )}
+                    </FadeIn>
+
+                    <FadeIn>
+                        <div className="pengumuman-sidebar-wrap">
+                            <div style={{
+                                background: 'linear-gradient(135deg, var(--teal-600), var(--teal-800))',
+                                padding: '24px', borderRadius: '16px', color: 'white'
+                            }}>
+                                <i className="fas fa-headset" style={{ fontSize: '24px', marginBottom: '12px', display: 'block' }} />
+                                <div style={{ fontWeight: 700, fontSize: '18px', marginBottom: '8px' }}>Pusat Pengaduan</div>
+                                <p style={{ fontSize: '13px', opacity: 0.9, marginBottom: '20px' }}>Ada laporan atau pengaduan? Kami siap membantu 24 jam.</p>
+                                <a href="https://lapor.go.id" target="_blank" rel="noreferrer" className="btn" style={{ background: 'white', color: 'var(--teal-700)', width: '100%', justifyContent: 'center' }}>
+                                    Lapor Sekarang
+                                </a>
+                            </div>
+                        </div>
+                    </FadeIn>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATISTIK
+// ═══════════════════════════════════════════════════════════════
+function StatistikSection() {
+    const [ringkasan, setRingkasan] = useState([]);
+    const [visual, setVisual] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        // Menggunakan api.get sesuai permintaanmu
+        api.get('/statistik-purbalingga')
+            .then(res => {
+                if (res.data.success) {
+                    setRingkasan(res.data.data.statistik_ringkasan);
+                    setVisual(res.data.data.statistik_visual);
+                }
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Gagal mengambil data statistik:", err);
+                setLoading(false);
+            });
+    }, []);
+
+    const getVal = (label) => {
+        const item = ringkasan.find(i => i.label === label);
+        return item ? `${item.nilai}` : '-';
+    };
+
+    const cards = [
+        { icon: 'fa-users',          num: getVal('Jumlah Penduduk'),      label: 'Jumlah Penduduk' },
+        { icon: 'fa-map',            num: getVal('Kepadatan Penduduk'),     label: 'Kepadatan Penduduk' },
+        { icon: 'fa-th-large',       num: getVal('Jumlah Kecamatan'),     label: 'Jumlah Kecamatan' },
+        { icon: 'fa-home',           num: getVal('Jumlah Desa/Kelurahan'),  label: 'Jumlah Desa/Kelurahan' },
+        { icon: 'fa-ruler-combined', num: getVal('Luas Wilayah'),          label: 'Luas Wilayah' },
+        { icon: 'fa-chart-line',     num: getVal('IPM Purbalingga'),       label: 'IPM Purbalingga' },
+        { icon: 'fa-coins',          num: getVal('PDRB Per Kapita'),       label: 'PDRB Per Kapita' },
+        { icon: 'fa-briefcase',      num: getVal('Angkatan Kerja'),        label: 'Angkatan Kerja' },
+    ];
+
+    // Fungsi untuk mengambil data grafik berdasarkan judul
+    const getChartData = (judul) => {
+        const chart = visual.find(v => v.judul === judul);
+        return chart ? chart.data_json : [];
+    };
+
+    if (loading) {
+        return <div className="text-center py-20 text-white">Memuat data statistik...</div>;
+    }
+
+    return (
+        <section className="statistik-section section" id="statistik">
+            <div className="container" style={{ position: 'relative', zIndex: 1 }}>
+                <FadeIn>
+                    <div className="section-header">
+                        <div className="section-label"><i className="fas fa-chart-bar" /> Data BPS & Pemkab</div>
+                        <h2 className="section-title">Statistik Kota Purbalingga</h2>
+                        <p className="section-desc">Data dan statistik resmi berdasarkan Badan Pusat Statistik dan sumber pemerintah.</p>
+                    </div>
+                </FadeIn>
+
+                <div className="statistik-grid">
+                    {cards.map((c) => (
+                        <FadeIn key={c.label}>
+                            <div className="statistik-card">
+                                <div className="statistik-icon"><i className={`fas ${c.icon}`} /></div>
+                                <div className="statistik-num">{c.num}</div>
+                                <div className="statistik-label">{c.label}</div>
+                            </div>
+                        </FadeIn>
+                    ))}
+                </div>
+
+                <FadeIn>
+                    <div className="statistik-charts">
+                    {[
+                        { title: 'Tingkat Pendidikan', icon: 'fa-graduation-cap', data: getChartData('Tingkat Pendidikan') },
+                        { title: 'Sektor Ekonomi Utama', icon: 'fa-industry', data: getChartData('Sektor Ekonomi Utama') }
+                    ].map((chart) => (
+                        <div className="statistik-chart-card" key={chart.title}>
+                            <div className="chart-title">
+                                <i className={`fas ${chart.icon}`} style={{ color: 'var(--teal-300)', marginRight: 8 }} />
+                                {chart.title}
+                            </div>
+                            <div className="chart-bar-list">
+                                {chart.data.length > 0 ? chart.data.map((row, idx) => (
+                                    <div className="chart-bar-item" key={idx}>
+                                        <div className="chart-bar-header">
+                                            <span>{row.label}</span>
+                                            <span>{row.pct}%</span>
+                                        </div>
+                                        <div className="chart-bar-track">
+                                            <div 
+                                                className="chart-bar-fill" 
+                                                style={{ width: `${row.pct}%`, background: row.color }} 
+                                            />
+                                        </div>
+                                    </div>
+                                )) : <p className="text-white opacity-50">Data tidak tersedia</p>}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                </FadeIn>
+
+                <FadeIn>
+                    <div style={{ textAlign: 'center', marginTop: 40 }}>
+                    <p style={{ color: 'rgba(255,255,255,.5)', fontSize: 13, marginBottom: 16 }}>
+                        <i className="fas fa-info-circle" /> Data diperbarui berdasarkan BPS Kabupaten Purbalingga — Realtime 2026
+                    </p>
+                    <a href="https://purbalinggakab.bps.go.id" target="_blank" rel="noreferrer" className="btn btn-outline" style={{ borderColor: 'rgba(255,255,255,.3)', color: 'rgba(255,255,255,.8)' }}>
+                        <i className="fas fa-chart-line" /> Lihat Data Lengkap BPS
+                    </a>
+                </div>
+                </FadeIn>
+            </div>
+        </section>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HOME (compose semua section)
+// ═══════════════════════════════════════════════════════════════
+export default function Home() {
+    return (
+        <>
+            <HeroSection />
+            <ProfilSection />
+            <MengenalSection />
+            <WisataSection />
+            <BeritaSection />
+            <PelayananSection />
+            <EventSection />
+            <PengumumanSection />
+            <StatistikSection />
+        </>
+    );
+}
