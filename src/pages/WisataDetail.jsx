@@ -15,7 +15,7 @@ const formatJam = (jam) => {
     return jam.substring(0, 5).replace(':', '.');
 };
 
-const BASE_IMAGE_URL = 'http://192.168.40.128:8000/storage/';
+const BASE_IMAGE_URL = 'https://smartcitybackend-main-oqgeeg.free.laravel.cloud/storage/';
 
 export default function WisataDetail() {
     const { slug }   = useParams();
