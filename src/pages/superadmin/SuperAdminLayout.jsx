@@ -274,6 +274,7 @@ const NAV_GROUPS = [
       { icon: "fa-solid fa-bullhorn", label: "Pengumuman", path: "/super-admin/pengumuman" },
       { icon: "fa-solid fa-calendar", label: "Event", path: "/super-admin/event" },
       { icon: "fa-solid fa-building", label: "Bangunan", path: "/super-admin/bangunan" },
+      { icon: "fa-solid fa-camera", label: "CCTV", path: "/super-admin/cctv" },
     ],
   },
   {

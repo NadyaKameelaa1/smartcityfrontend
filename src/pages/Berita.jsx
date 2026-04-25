@@ -23,7 +23,7 @@ export default function Berita() {
     const [page, setPage] = useState(1);
     
     const PER_PAGE = 9;
-    const BASE_IMAGE_URL = 'http://192.168.40.128:8000/storage/';
+    const BASE_IMAGE_URL = 'http://localhost:8000/storage/';
 
     // 1. Fetch Data dari Backend
     useEffect(() => {

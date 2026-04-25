@@ -483,7 +483,7 @@ export default function KelolaPengumuman() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/superadmin/pengumuman");
+      const res = await api.get("/super-admin/pengumuman");
       setList(res.data.data || res.data || []);
     } catch {
       showToast("Gagal memuat data. Coba refresh.", "error");
@@ -592,13 +592,13 @@ export default function KelolaPengumuman() {
       };
 
       if (editTarget) {
-        await api.put(`/superadmin/pengumuman/${editTarget.id}`, payload);
+        await api.put(`/super-admin/pengumuman/${editTarget.id}`, payload);
         setList((prev) =>
           prev.map((p) => p.id === editTarget.id ? { ...p, ...payload } : p)
         );
         showToast(`Pengumuman "${form.judul}" berhasil diperbarui.`);
       } else {
-        const res = await api.post("/superadmin/pengumuman", payload);
+        const res = await api.post("/super-admin/pengumuman", payload);
         setList((prev) => [res.data.data || res.data, ...prev]);
         showToast(`Pengumuman "${form.judul}" berhasil ditambahkan.`);
       }
@@ -615,7 +615,7 @@ export default function KelolaPengumuman() {
     const item = confirmDel;
     setConfirmDel(null);
     try {
-      await api.delete(`/superadmin/pengumuman/${item.id}`);
+      await api.delete(`/super-admin/pengumuman/${item.id}`);
       setList((prev) => prev.filter((p) => p.id !== item.id));
       showToast(`Pengumuman "${item.judul}" berhasil dihapus.`);
     } catch {

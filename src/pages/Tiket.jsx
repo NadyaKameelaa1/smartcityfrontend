@@ -275,14 +275,14 @@ function Step2({ form, setForm, onNext, onBack }) {
 
 // ─── Step 3: Pembayaran ───────────────────────────────────────
 function Step3({ wisata, qty, form, onNext, onBack }) {
-    const [metode,  setMetode]  = useState('qris');
+    const [metode,  setMetode]  = useState('smartpay');
     const [loading, setLoading] = useState(false);
     const total = wisata ? qty.dewasa * wisata.harga_dewasa + qty.anak * wisata.harga_anak : 0;
 
     const metodes = [
-        { key: 'qris',    label: 'QRIS',               icon: 'fa-qrcode',     tag: '✓ Direkomendasikan', tagColor: '#16a34a' },
-        { key: 'transfer',label: 'Transfer Bank',       icon: 'fa-university', tag: null },
-        { key: 'ewallet', label: 'GoPay / OVO / Dana',  icon: 'fa-wallet',     tag: null },
+        { key: 'smartpay',    label: 'SMARTPAY',               icon: 'fa-qrcode',     tag: '✓ Direkomendasikan', tagColor: '#16a34a' },
+        // { key: 'transfer',label: 'Transfer Bank',       icon: 'fa-university', tag: null },
+        // { key: 'ewallet', label: 'GoPay / OVO / Dana',  icon: 'fa-wallet',     tag: null },
     ];
 
     const handleBayar = () => {

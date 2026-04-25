@@ -426,10 +426,6 @@ function MengenalSection() {
     );
 }
 
-// ── Ganti WisataSection di Home.jsx ─────────────────────────
-// Tambahkan useNavigate ke import di atas:
-// import { Link, useNavigate } from 'react-router-dom';
-
 function WisataSection() {
     const [wisataPreview, setWisataPreview] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -493,7 +489,7 @@ function BeritaSection() {
     const [berita, setBerita] = useState([]);
     const [filter, setFilter] = useState('semua');
     const [loading, setLoading] = useState(true);
-    const BASE_IMAGE_URL = 'http://192.168.40.128:8000/storage/';
+    const BASE_IMAGE_URL = 'http://localhost:8000/storage/';
 
     useEffect(() => {
         api.get('/berita')
@@ -716,7 +712,7 @@ function EventSection() {
                         const gambar = e.thumbnail
                             ? e.thumbnail.startsWith('http')
                                 ? e.thumbnail
-                                : `${import.meta.env.VITE_APP_URL ?? 'http://smartcitybackend-main-oqgeeg.free.laravel.cloud'}/storage/event/${e.thumbnail}`
+                                : `${import.meta.env.VITE_APP_URL ?? 'http://localhost:8000'}/storage/event/${e.thumbnail}`
                             : 'https://placehold.co/640x480?text=No+Image';
  
                         return {

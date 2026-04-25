@@ -2,7 +2,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-// ── CSS — pakai class untuk focus, bukan onFocus/onBlur inline ──
+// ─── Base URL API — sesuaikan dengan URL Laravel kamu ────────
+const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api';
+
+// ── CSS ───────────────────────────────────────────────────────
 const STYLE = `
 .auth-input {
     width: 100%;
@@ -51,6 +54,7 @@ const STYLE = `
     background: var(--teal-50);
     transform: translateY(-1px);
 }
+.auth-btn-google:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 .auth-btn-primary {
     width: 100%;
     padding: 14px;
@@ -71,42 +75,53 @@ const STYLE = `
     box-shadow: 0 6px 20px rgba(64,114,175,.3);
 }
 .auth-btn-primary:disabled {
-    opacity: .55;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+    opacity: .55; cursor: not-allowed; transform: none; box-shadow: none;
 }
 .auth-link {
-    color: var(--teal-600);
-    font-weight: 600;
-    text-decoration: none;
-    transition: color .15s;
+    color: var(--teal-600); font-weight: 600;
+    text-decoration: none; transition: color .15s;
 }
 .auth-link:hover { color: var(--teal-800); text-decoration: underline; }
 .show-pass-btn {
-    position: absolute;
-    right: 14px;
-    top: 50%;
+    position: absolute; right: 14px; top: 50%;
     transform: translateY(-50%);
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--text-muted);
-    font-size: 14px;
-    padding: 4px;
-    line-height: 1;
-    transition: color .15s;
+    background: none; border: none; cursor: pointer;
+    color: var(--text-muted); font-size: 14px;
+    padding: 4px; line-height: 1; transition: color .15s;
 }
 .show-pass-btn:hover { color: var(--teal-600); }
 .pass-strength-bar {
-    height: 4px;
-    border-radius: 2px;
-    transition: width .3s, background .3s;
+    height: 4px; border-radius: 2px;
+    transition: background .3s;
+}
+/* Alert global error dari server */
+.auth-alert-error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13.5px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+.auth-alert-success {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13.5px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
 }
 `;
 
 function InjectStyle() { return <style>{STYLE}</style>; }
 
+// ── Google Icon ───────────────────────────────────────────────
 function GoogleIcon() {
     return (
         <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
@@ -118,25 +133,24 @@ function GoogleIcon() {
     );
 }
 
-// ── Kekuatan password ────────────────────────────────────────
+// ── Password strength ─────────────────────────────────────────
 function passwordStrength(pw) {
     if (!pw) return { score: 0, label: '', color: 'var(--border)' };
-    let score = 0;
-    if (pw.length >= 8)          score++;
-    if (/[A-Z]/.test(pw))        score++;
-    if (/[0-9]/.test(pw))        score++;
-    if (/[^A-Za-z0-9]/.test(pw)) score++;
-    const map = [
-        { label: '',          color: 'var(--border)' },
-        { label: 'Lemah',     color: '#ef4444' },
-        { label: 'Cukup',     color: '#f59e0b' },
-        { label: 'Kuat',      color: '#3b82f6' },
-        { label: 'Sangat Kuat', color: '#16a34a' },
-    ];
-    return { score, ...map[score] };
+    let s = 0;
+    if (pw.length >= 8)          s++;
+    if (/[A-Z]/.test(pw))        s++;
+    if (/[0-9]/.test(pw))        s++;
+    if (/[^A-Za-z0-9]/.test(pw)) s++;
+    return [
+        { score: 0, label: '',            color: 'var(--border)' },
+        { score: 1, label: 'Lemah',       color: '#ef4444' },
+        { score: 2, label: 'Cukup',       color: '#f59e0b' },
+        { score: 3, label: 'Kuat',        color: '#3b82f6' },
+        { score: 4, label: 'Sangat Kuat', color: '#16a34a' },
+    ][s];
 }
 
-// ── Sidebar (sama seperti Login) ─────────────────────────────
+// ── Sidebar ───────────────────────────────────────────────────
 function AuthSidebar() {
     return (
         <div style={{ background: 'linear-gradient(160deg, var(--teal-900) 0%, var(--teal-950) 100%)', padding: '48px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
@@ -155,7 +169,6 @@ function AuthSidebar() {
                         <div style={{ fontSize: 10, color: 'var(--teal-300)', letterSpacing: 2, textTransform: 'uppercase', fontWeight: 600 }}>Smart City</div>
                     </div>
                 </div>
-
                 <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(20px,2.5vw,28px)', fontWeight: 700, color: 'white', lineHeight: 1.2, marginBottom: 14 }}>
                     Bergabung &amp;<br />Akses Semua Fitur
                 </h2>
@@ -164,15 +177,14 @@ function AuthSidebar() {
                 </p>
             </div>
 
-            {/* Benefit list */}
             <div style={{ position: 'relative', zIndex: 2 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--teal-300)', marginBottom: 16 }}>Keuntungan daftar</div>
                 {[
-                    { icon: 'fa-ticket-alt',    text: 'Pesan tiket wisata online' },
-                    { icon: 'fa-bell',          text: 'Notifikasi pengumuman penting' },
-                    { icon: 'fa-history',       text: 'Riwayat pemesanan tiket' },
-                    { icon: 'fa-user-circle',   text: 'Profil & identitas digital' },
-                    { icon: 'fa-shield-alt',    text: 'Akun aman & terverifikasi' },
+                    { icon: 'fa-ticket-alt',  text: 'Pesan tiket wisata online' },
+                    { icon: 'fa-bell',        text: 'Notifikasi pengumuman penting' },
+                    { icon: 'fa-history',     text: 'Riwayat pemesanan tiket' },
+                    { icon: 'fa-user-circle', text: 'Profil & identitas digital' },
+                    { icon: 'fa-shield-alt',  text: 'Akun aman & terverifikasi' },
                 ].map((f) => (
                     <div key={f.text} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                         <div style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(255,255,255,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -181,7 +193,6 @@ function AuthSidebar() {
                         <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)' }}>{f.text}</span>
                     </div>
                 ))}
-
                 <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,.1)', fontSize: 12, color: 'rgba(255,255,255,.4)' }}>
                     © 2025 Pemerintah Kabupaten Purbalingga
                 </div>
@@ -190,7 +201,7 @@ function AuthSidebar() {
     );
 }
 
-// ── Field helper ─────────────────────────────────────────────
+// ── Field helper ──────────────────────────────────────────────
 function Field({ id, label, icon, type = 'text', placeholder, value, onChange, error, autoComplete, hint, rightSlot }) {
     return (
         <div>
@@ -213,8 +224,14 @@ function Field({ id, label, icon, type = 'text', placeholder, value, onChange, e
                 />
                 {rightSlot}
             </div>
-            {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 4 }}><i className="fas fa-exclamation-circle" style={{ marginRight: 4 }} />{error}</div>}
-            {hint && !error && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{hint}</div>}
+            {error && (
+                <div style={{ fontSize: 12, color: '#ef4444', marginTop: 4 }}>
+                    <i className="fas fa-exclamation-circle" style={{ marginRight: 4 }} />{error}
+                </div>
+            )}
+            {hint && !error && (
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{hint}</div>
+            )}
         </div>
     );
 }
@@ -229,61 +246,141 @@ function Divider() {
     );
 }
 
-// ── Main Daftar Page ─────────────────────────────────────────
+// ── Main Daftar Page ──────────────────────────────────────────
 export default function Daftar() {
     const navigate = useNavigate();
 
     const [form, setForm] = useState({
-        username:    '',
-        full_name:   '',
-        email:       '',
-        password:    '',
-        konfirmasi:  '',
+        username:   '',
+        full_name:  '',
+        email:      '',
+        password:   '',
+        konfirmasi: '',
     });
-    const [errors,     setErrors]     = useState({});
-    const [showPass,   setShowPass]   = useState(false);
-    const [showKonfirm, setShowKonfirm] = useState(false);
-    const [loading,    setLoading]    = useState(false);
-    const [googleLoad, setGoogleLoad] = useState(false);
-    const [agreed,     setAgreed]     = useState(false);
 
-    const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+    // errors bisa berisi pesan dari client-side validate ATAU dari Laravel (422)
+    const [errors,      setErrors]      = useState({});
+    const [globalError, setGlobalError] = useState('');   // error non-field dari server
+    const [showPass,    setShowPass]    = useState(false);
+    const [showKonfirm, setShowKonfirm] = useState(false);
+    const [loading,     setLoading]     = useState(false);
+    const [googleLoad,  setGoogleLoad]  = useState(false);
+    const [agreed,      setAgreed]      = useState(false);
+
+    const set = (k) => (e) => {
+        setForm((f) => ({ ...f, [k]: e.target.value }));
+        // Hapus error field yang sedang diketik
+        if (errors[k]) setErrors((err) => ({ ...err, [k]: undefined }));
+    };
 
     const strength = passwordStrength(form.password);
 
-    const validate = () => {
+    // ── Validasi sisi klien ──────────────────────────────────
+    function validateClient() {
         const e = {};
-        if (!form.username.trim())             e.username   = 'Username wajib diisi';
+        if (!form.username.trim())
+            e.username = 'Username wajib diisi.';
         else if (!/^[a-z0-9_]{3,30}$/.test(form.username))
-                                               e.username   = 'Username: 3–30 karakter, huruf kecil, angka, underscore';
-        if (!form.full_name.trim())            e.full_name  = 'Nama lengkap wajib diisi';
-        if (!form.email.trim())                e.email      = 'Email wajib diisi';
+            e.username = 'Username: 3–30 karakter, huruf kecil, angka, underscore.';
+
+        if (!form.full_name.trim())
+            e.full_name = 'Nama lengkap wajib diisi.';
+
+        if (!form.email.trim())
+            e.email = 'Email wajib diisi.';
         else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-                                               e.email      = 'Format email tidak valid';
-        if (!form.password)                    e.password   = 'Password wajib diisi';
-        else if (form.password.length < 8)     e.password   = 'Password minimal 8 karakter';
-        if (form.konfirmasi !== form.password) e.konfirmasi = 'Password tidak cocok';
-        if (!agreed)                           e.agreed     = 'Anda harus menyetujui syarat & ketentuan';
+            e.email = 'Format email tidak valid.';
+
+        if (!form.password)
+            e.password = 'Password wajib diisi.';
+        else if (form.password.length < 8)
+            e.password = 'Password minimal 8 karakter.';
+
+        if (form.konfirmasi !== form.password)
+            e.konfirmasi = 'Konfirmasi password tidak cocok.';
+
+        if (!agreed)
+            e.agreed = 'Anda harus menyetujui syarat & ketentuan.';
+
         setErrors(e);
         return Object.keys(e).length === 0;
-    };
+    }
 
-    const handleSubmit = (ev) => {
+    // ── Memetakan errors dari Laravel (422) ke field ─────────
+    function applyServerErrors(serverErrors) {
+        // serverErrors: { username: ['...'], email: ['...'], ... }
+        // Peta nama field Laravel → nama field form
+        const fieldMap = {
+            username:          'username',
+            name:              'full_name',   // Laravel: 'name', form: 'full_name'
+            email:             'email',
+            password:          'password',
+            'password_confirmation': 'konfirmasi',
+        };
+
+        const mapped = {};
+        for (const [key, messages] of Object.entries(serverErrors)) {
+            const formKey = fieldMap[key] ?? key;
+            mapped[formKey] = Array.isArray(messages) ? messages[0] : messages;
+        }
+        setErrors((prev) => ({ ...prev, ...mapped }));
+    }
+
+    // ── Submit register ───────────────────────────────────────
+    async function handleSubmit(ev) {
         ev.preventDefault();
-        if (!validate()) return;
-        setLoading(true);
-        // Ganti dengan API call ke Laravel: POST /api/register
-        setTimeout(() => {
-            setLoading(false);
-            navigate('/login');
-        }, 1800);
-    };
+        setGlobalError('');
+        if (!validateClient()) return;
 
-    const handleGoogle = () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`${API_BASE}/auth/register`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({
+                    username:              form.username.trim(),
+                    name:                  form.full_name.trim(),   // kolom DB: 'name'
+                    email:                 form.email.trim(),
+                    password:              form.password,
+                    password_confirmation: form.konfirmasi,         // required by Confirmed rule
+                }),
+            });
+
+            const data = await res.json();
+
+            if (res.status === 201) {
+                // Simpan token ke localStorage (atau context/store jika pakai state management)
+                localStorage.setItem('auth_token', data.token);
+                localStorage.setItem('auth_user',  JSON.stringify(data.user));
+
+                // Redirect ke halaman utama atau halaman profil
+                navigate('/');
+                return;
+            }
+
+            if (res.status === 422) {
+                // Validasi gagal dari Laravel
+                applyServerErrors(data.errors ?? {});
+                return;
+            }
+
+            // Error lain (500, dsb)
+            setGlobalError(data.message ?? 'Terjadi kesalahan pada server. Coba beberapa saat lagi.');
+
+        } catch (err) {
+            // Network error / server tidak bisa dijangkau
+            setGlobalError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    // ── Google OAuth ──────────────────────────────────────────
+    function handleGoogle() {
         setGoogleLoad(true);
-        // window.location.href = '/auth/google/redirect';
-        setTimeout(() => setGoogleLoad(false), 2000);
-    };
+        // Arahkan ke endpoint Google OAuth Laravel Socialite
+        window.location.href = `${API_BASE.replace('/api', '')}/auth/google/redirect`;
+    }
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
@@ -291,10 +388,9 @@ export default function Daftar() {
 
             <div style={{ width: '100%', maxWidth: 920, background: 'white', borderRadius: 'var(--radius-xl)', overflow: 'hidden', boxShadow: 'var(--shadow-lg)', display: 'grid', gridTemplateColumns: '1fr 1.2fr' }}>
 
-                {/* Sidebar kiri */}
                 <AuthSidebar />
 
-                {/* Form kanan */}
+                {/* ── Form kanan ── */}
                 <div style={{ padding: '40px 40px', overflowY: 'auto', maxHeight: '92vh' }}>
                     <div style={{ marginBottom: 22 }}>
                         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, color: 'var(--dark)', marginBottom: 4 }}>
@@ -303,8 +399,21 @@ export default function Daftar() {
                         <p style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>Daftar gratis, mulai akses semua fitur</p>
                     </div>
 
+                    {/* Global server error */}
+                    {globalError && (
+                        <div className="auth-alert-error" style={{ marginBottom: 16 }}>
+                            <i className="fas fa-exclamation-circle" style={{ flexShrink: 0, marginTop: 1 }} />
+                            <span>{globalError}</span>
+                        </div>
+                    )}
+
                     {/* Google */}
-                    <button className="auth-btn-google" onClick={handleGoogle} disabled={googleLoad} style={{ marginBottom: 18 }}>
+                    <button
+                        className="auth-btn-google"
+                        onClick={handleGoogle}
+                        disabled={googleLoad || loading}
+                        style={{ marginBottom: 18 }}
+                    >
                         {googleLoad
                             ? <><i className="fas fa-spinner fa-spin" style={{ fontSize: 14 }} /> Menghubungkan...</>
                             : <><GoogleIcon /> Daftar dengan Google</>
@@ -315,7 +424,7 @@ export default function Daftar() {
 
                     <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 6 }}>
 
-                        {/* Grid 2 kolom untuk username & full name */}
+                        {/* Username + Nama Lengkap */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                             <Field
                                 id="username"
@@ -352,7 +461,7 @@ export default function Daftar() {
                             autoComplete="email"
                         />
 
-                        {/* Password + strength indicator */}
+                        {/* Password + strength */}
                         <div>
                             <Field
                                 id="password"
@@ -365,17 +474,20 @@ export default function Daftar() {
                                 error={errors.password}
                                 autoComplete="new-password"
                                 rightSlot={
-                                    <button type="button" className="show-pass-btn" onClick={() => setShowPass((v) => !v)} tabIndex={-1}>
+                                    <button type="button" className="show-pass-btn" onClick={() => setShowPass(v => !v)} tabIndex={-1}>
                                         <i className={`fas ${showPass ? 'fa-eye-slash' : 'fa-eye'}`} />
                                     </button>
                                 }
                             />
-                            {/* Strength bar */}
                             {form.password && (
                                 <div style={{ marginTop: 6 }}>
                                     <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
-                                        {[1, 2, 3, 4].map((i) => (
-                                            <div key={i} className="pass-strength-bar" style={{ flex: 1, background: i <= strength.score ? strength.color : 'var(--border)' }} />
+                                        {[1,2,3,4].map(i => (
+                                            <div
+                                                key={i}
+                                                className="pass-strength-bar"
+                                                style={{ flex: 1, background: i <= strength.score ? strength.color : 'var(--border)' }}
+                                            />
                                         ))}
                                     </div>
                                     {strength.label && (
@@ -396,7 +508,7 @@ export default function Daftar() {
                             error={errors.konfirmasi}
                             autoComplete="new-password"
                             rightSlot={
-                                <button type="button" className="show-pass-btn" onClick={() => setShowKonfirm((v) => !v)} tabIndex={-1}>
+                                <button type="button" className="show-pass-btn" onClick={() => setShowKonfirm(v => !v)} tabIndex={-1}>
                                     <i className={`fas ${showKonfirm ? 'fa-eye-slash' : 'fa-eye'}`} />
                                 </button>
                             }
@@ -408,7 +520,10 @@ export default function Daftar() {
                                 <input
                                     type="checkbox"
                                     checked={agreed}
-                                    onChange={(e) => { setAgreed(e.target.checked); if (e.target.checked) setErrors((er) => ({ ...er, agreed: undefined })); }}
+                                    onChange={(e) => {
+                                        setAgreed(e.target.checked);
+                                        if (e.target.checked) setErrors(er => ({ ...er, agreed: undefined }));
+                                    }}
                                     style={{ marginTop: 2, accentColor: 'var(--teal-600)', width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }}
                                 />
                                 <span style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
@@ -419,7 +534,11 @@ export default function Daftar() {
                                     {' '}Purbalingga Smart City
                                 </span>
                             </label>
-                            {errors.agreed && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 4 }}><i className="fas fa-exclamation-circle" style={{ marginRight: 4 }} />{errors.agreed}</div>}
+                            {errors.agreed && (
+                                <div style={{ fontSize: 12, color: '#ef4444', marginTop: 4 }}>
+                                    <i className="fas fa-exclamation-circle" style={{ marginRight: 4 }} />{errors.agreed}
+                                </div>
+                            )}
                         </div>
 
                         <button type="submit" className="auth-btn-primary" disabled={loading} style={{ marginTop: 2 }}>

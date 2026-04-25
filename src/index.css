@@ -1072,3 +1072,40 @@ h1,h2,h3,h4{font-family:var(--font-display);line-height:1.2}
                     .pelayanan-search-wrap { max-width: 100%; }
                     .pelayanan-hero__deco  { display: none; }
                 }
+
+                /* ── Custom Scrollbar ── */
+
+/* Scrollbar utama (halaman light) */
+html {
+    scrollbar-width: thin;
+    scrollbar-color: #4072af #eef3fa;
+}
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #eef3fa;
+    border-radius: 99px;
+}
+::-webkit-scrollbar-thumb {
+    background: #4072af;
+    border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #35609a;
+}
+
+/* Scrollbar untuk section/elemen gelap (teal-950) */
+.event-section ::-webkit-scrollbar-track,
+.statistik-section ::-webkit-scrollbar-track {
+    background: #102d4d;
+}
+.event-section ::-webkit-scrollbar-thumb,
+.statistik-section ::-webkit-scrollbar-thumb {
+    background: #4072af;
+}
+.event-section ::-webkit-scrollbar-thumb:hover,
+.statistik-section ::-webkit-scrollbar-thumb:hover {
+    background: #7aadd3;
+}

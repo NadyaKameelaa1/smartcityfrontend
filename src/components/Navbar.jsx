@@ -21,7 +21,7 @@ const navLinks = [
 ];
 
 // Ganti dengan nama user dari context/auth state kamu
-const DUMMY_USER = { nama: 'Nadya Kameela', loggedIn: true };
+const DUMMY_USER = { nama: 'Nadya Kameela', loggedIn: false };
 
 function getInitials(name = '') {
     const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -359,7 +359,7 @@ export default function Navbar() {
                                 </div>
                             ) : (
                                 <Link to="/login" className="btn-login">
-                                    <i className="fas fa-sign-in-alt" /> Masuk
+                                    <i className="fas fa-sign-in-alt" /> Login
                                 </Link>
                             )}
 

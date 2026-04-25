@@ -18,7 +18,7 @@ export default function BeritaDetail() {
     const [berita, setBerita] = useState(null);
     const [lainnya, setLainnya] = useState([]);
     const [loading, setLoading] = useState(true);
-    const BASE_IMAGE_URL = 'http://192.168.40.128:8000/storage/';
+    const BASE_IMAGE_URL = 'http://localhost:8000/storage/';
 
     useEffect(() => {
         setLoading(true);

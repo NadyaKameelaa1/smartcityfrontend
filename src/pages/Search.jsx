@@ -1,108 +1,137 @@
 // src/pages/Search.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { wisataData, beritaData, pengumumanData, eventData, pelayananData } from '../data/mockData';
+import api from '../api/axios';
 
-const formatTanggal = (str) =>
-    new Date(str).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-
-// ── Meta per kategori ─────────────────────────────────────────
-const CAT_META = {
-    wisata:     { label: 'Wisata',      icon: 'fa-mountain',      color: 'var(--teal-600)' },
-    berita:     { label: 'Berita',      icon: 'fa-newspaper',     color: '#4072af' },
-    event:      { label: 'Event',       icon: 'fa-calendar-alt',  color: '#16a34a' },
-    pengumuman: { label: 'Pengumuman',  icon: 'fa-bullhorn',      color: '#d4a853' },
-    pelayanan:  { label: 'Pelayanan',   icon: 'fa-hands-helping', color: '#7c3aed' },
+// ─────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────
+const formatTanggal = (str) => {
+    if (!str) return '';
+    return new Date(str).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-// ── Search engine lokal ───────────────────────────────────────
-// Sekarang bekerja dalam dua mode:
-//   1. query kosong  → kembalikan SEMUA item dalam kategori (browse mode)
-//   2. query ada     → filter berdasarkan keyword (search mode)
-function searchAll(query, kategori) {
+const CAT_META = {
+    wisata:     { label: 'Wisata',      icon: 'fa-mountain',      color: 'var(--teal-600)' },
+    berita:     { label: 'Berita',      icon: 'fa-newspaper',     color: '#4072af'         },
+    event:      { label: 'Event',       icon: 'fa-calendar-alt',  color: '#16a34a'         },
+    pengumuman: { label: 'Pengumuman',  icon: 'fa-bullhorn',      color: '#d4a853'         },
+    pelayanan:  { label: 'Pelayanan',   icon: 'fa-hands-helping', color: '#7c3aed'         },
+};
+
+// ─────────────────────────────────────────────────────────────────
+// Normalisasi data dari API ke format flat { type, title, desc, href, img, meta }
+// Field-field disesuaikan dengan schema database nyata:
+//   wisata     : nama, slug, deskripsi, kategori, thumbnail, kecamatan_id
+//   berita     : judul, slug, konten, kategori, thumbnail, published_at, publisher
+//   event      : nama, slug, kategori, lokasi, tanggal_mulai, jam_mulai, thumbnail
+//   pengumuman : judul, slug, isi, publisher, tanggal_mulai
+//   pelayanan  : nama, deskripsi, url, icon
+// ─────────────────────────────────────────────────────────────────
+function normalizeWisata(items = []) {
+    return items.map((w) => ({
+        type:      'wisata',
+        typeLabel: 'Wisata',
+        icon:      'fa-mountain',
+        color:     'var(--teal-600)',
+        id:        w.id,
+        title:     w.nama,
+        desc:      w.deskripsi,
+        href:      `/wisata/${w.slug || w.id}`,
+        img:       w.thumbnail,
+        meta:      w.kategori || '',
+        // keywords untuk client-side filter (lowercase)
+        keywords:  [w.nama, w.deskripsi, w.kategori].filter(Boolean).map((s) => s.toLowerCase()),
+    }));
+}
+
+function normalizeBerita(items = []) {
+    return items.map((b) => ({
+        type:      'berita',
+        typeLabel: 'Berita',
+        icon:      'fa-newspaper',
+        color:     '#4072af',
+        id:        b.id,
+        title:     b.judul,
+        // konten bisa panjang, ambil 160 char saja
+        desc:      b.konten ? b.konten.replace(/<[^>]*>/g, '').slice(0, 160) : '',
+        href:      `/berita/${b.slug || b.id}`,
+        img:       b.thumbnail,
+        meta:      formatTanggal(b.published_at || b.created_at),
+        keywords:  [b.judul, b.konten, b.kategori, b.publisher]
+                        .filter(Boolean).map((s) => s.replace(/<[^>]*>/g, '').toLowerCase()),
+    }));
+}
+
+function normalizeEvent(items = []) {
+    return items.map((e) => ({
+        type:      'event',
+        typeLabel: 'Event',
+        icon:      'fa-calendar-alt',
+        color:     '#16a34a',
+        id:        e.id,
+        title:     e.nama,
+        desc:      [e.lokasi, e.jam_mulai].filter(Boolean).join(' · '),
+        href:      `/event`,
+        img:       e.thumbnail,
+        meta:      formatTanggal(e.tanggal_mulai),
+        keywords:  [e.nama, e.kategori, e.lokasi, e.penyelenggara]
+                        .filter(Boolean).map((s) => s.toLowerCase()),
+    }));
+}
+
+function normalizePengumuman(items = []) {
+    return items.map((p) => ({
+        type:      'pengumuman',
+        typeLabel: 'Pengumuman',
+        icon:      'fa-bullhorn',
+        color:     '#d4a853',
+        id:        p.id,
+        title:     p.judul,
+        desc:      p.isi ? p.isi.replace(/<[^>]*>/g, '').slice(0, 160) : '',
+        href:      `/pengumuman/${p.slug || p.id}`,
+        img:       null,
+        meta:      formatTanggal(p.tanggal_mulai || p.created_at),
+        keywords:  [p.judul, p.isi, p.publisher]
+                        .filter(Boolean).map((s) => s.replace(/<[^>]*>/g, '').toLowerCase()),
+    }));
+}
+
+function normalizePelayanan(items = []) {
+    return items.map((p) => ({
+        type:      'pelayanan',
+        typeLabel: 'Pelayanan',
+        icon:      p.icon || 'fa-hands-helping',
+        color:     '#7c3aed',
+        id:        p.id,
+        title:     p.nama,
+        desc:      p.deskripsi,
+        href:      p.url,
+        img:       null,
+        meta:      null,
+        keywords:  [p.nama, p.deskripsi].filter(Boolean).map((s) => s.toLowerCase()),
+    }));
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Client-side filter (setelah data di-fetch dari API)
+// ─────────────────────────────────────────────────────────────────
+function filterItems(allItems, query, kategori) {
     const q = query.toLowerCase().trim();
-    const matchStr = (str) => !q || str?.toLowerCase().includes(q);
-
-    const results = [];
-
-    if (kategori === 'semua' || kategori === 'wisata') {
-        wisataData.forEach((w) => {
-            if (matchStr(w.nama) || matchStr(w.deskripsi) || matchStr(w.lokasi) || matchStr(w.kategori)) {
-                results.push({
-                    type: 'wisata', typeLabel: 'Wisata',
-                    icon: 'fa-mountain', color: 'var(--teal-600)',
-                    data: w, title: w.nama, desc: w.deskripsi,
-                    href: `/wisata/${w.slug || w.id}`, img: w.gambar,
-                    meta: w.lokasi,
-                });
-            }
-        });
-    }
-    if (kategori === 'semua' || kategori === 'berita') {
-        beritaData.forEach((b) => {
-            if (matchStr(b.judul) || matchStr(b.excerpt) || matchStr(b.kategori)) {
-                results.push({
-                    type: 'berita', typeLabel: 'Berita',
-                    icon: 'fa-newspaper', color: '#4072af',
-                    data: b, title: b.judul, desc: b.excerpt,
-                    href: `/berita/${b.slug}`, img: b.gambar,
-                    meta: formatTanggal(b.tanggal),
-                });
-            }
-        });
-    }
-    if (kategori === 'semua' || kategori === 'pengumuman') {
-        pengumumanData.forEach((p) => {
-            if (matchStr(p.judul) || matchStr(p.isi) || matchStr(p.instansi)) {
-                results.push({
-                    type: 'pengumuman', typeLabel: 'Pengumuman',
-                    icon: 'fa-bullhorn', color: '#d4a853',
-                    data: p, title: p.judul, desc: p.isi,
-                    href: `/pengumuman/${p.id}`, img: null,
-                    meta: formatTanggal(p.tanggal),
-                });
-            }
-        });
-    }
-    if (kategori === 'semua' || kategori === 'event') {
-        eventData.forEach((e) => {
-            if (matchStr(e.nama) || matchStr(e.kategori) || matchStr(e.lokasi)) {
-                results.push({
-                    type: 'event', typeLabel: 'Event',
-                    icon: 'fa-calendar-alt', color: '#16a34a',
-                    data: e, title: e.nama, desc: `${e.lokasi} · ${e.jam}`,
-                    href: null, img: e.gambar,
-                    meta: formatTanggal(e.tanggal),
-                });
-            }
-        });
-    }
-    if (kategori === 'semua' || kategori === 'pelayanan') {
-        pelayananData.forEach((p) => {
-            if (matchStr(p.nama) || matchStr(p.deskripsi)) {
-                results.push({
-                    type: 'pelayanan', typeLabel: 'Pelayanan',
-                    icon: 'fa-hands-helping', color: '#7c3aed',
-                    data: p, title: p.nama, desc: p.deskripsi,
-                    href: p.url, img: null,
-                    meta: null,
-                });
-            }
-        });
-    }
-
-    return results;
+    return allItems.filter((item) => {
+        // filter kategori
+        if (kategori !== 'semua' && item.type !== kategori) return false;
+        // jika ada query, filter keywords
+        if (q) return item.keywords.some((k) => k.includes(q));
+        return true;
+    });
 }
 
-// Hitung jumlah item per kategori (untuk badge filter sidebar)
-function countByKat(query, kat) {
-    if (kat === 'semua') return searchAll(query, 'semua').length;
-    return searchAll(query, kat).length;
-}
-
-// ── Highlight keyword ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// Highlight
+// ─────────────────────────────────────────────────────────────────
 function Highlight({ text = '', query = '' }) {
-    if (!query.trim()) return <>{text}</>;
+    if (!query.trim() || !text) return <>{text}</>;
     const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     const parts = text.split(regex);
     return (
@@ -116,7 +145,9 @@ function Highlight({ text = '', query = '' }) {
     );
 }
 
-// ── Result Card ───────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// Result Card
+// ─────────────────────────────────────────────────────────────────
 function ResultCard({ result, query }) {
     const inner = (
         <div
@@ -130,11 +161,12 @@ function ResultCard({ result, query }) {
             onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateX(4px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
         >
-            {/* Gambar atau icon */}
+            {/* Gambar atau icon placeholder */}
             {result.img ? (
                 <img
                     src={result.img} alt={result.title}
                     style={{ width: 88, height: 72, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
             ) : (
                 <div style={{ width: 88, height: 72, borderRadius: 8, background: 'var(--teal-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -173,46 +205,142 @@ function ResultCard({ result, query }) {
         </div>
     );
 
-    if (result.href) {
-        const isExternal = result.href.startsWith('http');
-        return isExternal
-            ? <a href={result.href} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>{inner}</a>
-            : <Link to={result.href} style={{ textDecoration: 'none' }}>{inner}</Link>;
-    }
-    return inner;
+    if (!result.href) return inner;
+    const isExternal = result.href.startsWith('http');
+    return isExternal
+        ? <a href={result.href} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>{inner}</a>
+        : <Link to={result.href} style={{ textDecoration: 'none' }}>{inner}</Link>;
 }
 
-// ── Empty state ───────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// Skeleton loading
+// ─────────────────────────────────────────────────────────────────
+function SkeletonCard() {
+    return (
+        <div style={{ display: 'flex', gap: 16, padding: '20px 24px', background: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+            <div style={{ width: 88, height: 72, borderRadius: 8, background: '#e2e8f0', flexShrink: 0, animation: 'pulse 1.4s ease infinite' }} />
+            <div style={{ flex: 1 }}>
+                <div style={{ height: 12, width: '30%', background: '#e2e8f0', borderRadius: 6, marginBottom: 10, animation: 'pulse 1.4s ease infinite' }} />
+                <div style={{ height: 18, width: '70%', background: '#e2e8f0', borderRadius: 6, marginBottom: 8, animation: 'pulse 1.4s ease infinite' }} />
+                <div style={{ height: 13, width: '90%', background: '#f1f5f9', borderRadius: 6, animation: 'pulse 1.4s ease infinite' }} />
+            </div>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Empty state
+// ─────────────────────────────────────────────────────────────────
 function EmptyState({ query, kategori }) {
     const catLabel = CAT_META[kategori]?.label || '';
     return (
         <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <i className="fas fa-search-minus" style={{ fontSize: 48, color: 'var(--teal-200)', marginBottom: 16 }} />
+            <i className="fas fa-search-minus" style={{ fontSize: 48, color: 'var(--teal-200)', marginBottom: 16, display: 'block' }} />
             <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--dark)', marginBottom: 8 }}>Tidak ada hasil</h3>
             <p style={{ color: 'var(--text-muted)', fontSize: 15 }}>
                 {query
                     ? `Tidak ada hasil untuk "${query}"${catLabel ? ` di kategori ${catLabel}` : ''}. Coba kata kunci lain.`
-                    : `Belum ada data untuk kategori ${catLabel}.`
-                }
+                    : `Belum ada data untuk kategori ${catLabel}.`}
             </p>
         </div>
     );
 }
 
-// ── Main Search Page ──────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// Main Search Page
+// ─────────────────────────────────────────────────────────────────
 export default function Search() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [inputVal, setInputVal] = useState(() => searchParams.get('q') || '');
 
+    // State data API — satu kali fetch semua, lalu filter client-side
+    const [allItems, setAllItems]     = useState([]);
+    const [dataReady, setDataReady]   = useState(false);
+    const [fetchError, setFetchError] = useState(false);
+
+    // Count per kategori (dari data yang sudah di-fetch)
+    const [counts, setCounts] = useState({ semua: 0, wisata: 0, berita: 0, event: 0, pengumuman: 0, pelayanan: 0 });
+
     const query    = searchParams.get('q') || '';
     const kategori = searchParams.get('cat') || 'semua';
 
-    // Selalu jalankan search (dengan atau tanpa query)
-    const results = searchAll(query, kategori);
-
+    // ── Fetch semua data dari API saat mount ───────────────────
     useEffect(() => {
-        setInputVal(query);
-    }, [query]);
+        let cancelled = false;
+        setDataReady(false);
+        setFetchError(false);
+
+        const fetchAll = async () => {
+            try {
+                // Fetch paralel semua endpoint publik
+                // Route: GET /wisata, /berita, /pengumuman, /pelayanan, /events
+                const [wisataRes, beritaRes, pengumumanRes, pelayananRes, eventRes] = await Promise.allSettled([
+                    api.get('/wisata'),
+                    api.get('/berita'),
+                    api.get('/pengumuman'),
+                    api.get('/pelayanan'),
+                    api.get('/events'),
+                ]);
+
+                if (cancelled) return;
+
+                // Unwrap response — format: { success: true, data: [...] } atau langsung array
+                const unwrap = (res) => {
+                    if (res.status !== 'fulfilled') return [];
+                    const d = res.value?.data;
+                    if (Array.isArray(d)) return d;
+                    if (Array.isArray(d?.data)) return d.data;
+                    return [];
+                };
+
+                const wisata     = normalizeWisata(unwrap(wisataRes));
+                const berita     = normalizeBerita(unwrap(beritaRes));
+                const pengumuman = normalizePengumuman(unwrap(pengumumanRes));
+                const pelayanan  = normalizePelayanan(unwrap(pelayananRes));
+                const event      = normalizeEvent(unwrap(eventRes));
+
+                const merged = [...wisata, ...berita, ...event, ...pengumuman, ...pelayanan];
+                setAllItems(merged);
+                setCounts({
+                    semua:      merged.length,
+                    wisata:     wisata.length,
+                    berita:     berita.length,
+                    event:      event.length,
+                    pengumuman: pengumuman.length,
+                    pelayanan:  pelayanan.length,
+                });
+                setDataReady(true);
+            } catch (err) {
+                if (!cancelled) {
+                    console.error('Search fetch error:', err);
+                    setFetchError(true);
+                    setDataReady(true);
+                }
+            }
+        };
+
+        fetchAll();
+        return () => { cancelled = true; };
+    }, []); // sekali saja saat mount
+
+    // ── Sync input dengan URL param q ──────────────────────────
+    useEffect(() => { setInputVal(query); }, [query]);
+
+    // ── Filter client-side setelah data siap ──────────────────
+    const results = dataReady ? filterItems(allItems, query, kategori) : [];
+
+    // ── Count per kategori untuk sidebar badge ─────────────────
+    // Hitung berdasarkan filter query saat ini (tanpa filter kategori)
+    const filteredCounts = dataReady
+        ? {
+            semua:      filterItems(allItems, query, 'semua').length,
+            wisata:     filterItems(allItems, query, 'wisata').length,
+            berita:     filterItems(allItems, query, 'berita').length,
+            event:      filterItems(allItems, query, 'event').length,
+            pengumuman: filterItems(allItems, query, 'pengumuman').length,
+            pelayanan:  filterItems(allItems, query, 'pelayanan').length,
+        }
+        : { semua: 0, wisata: 0, berita: 0, event: 0, pengumuman: 0, pelayanan: 0 };
 
     function doSearch() {
         const params = { cat: kategori };
@@ -235,7 +363,6 @@ export default function Search() {
         { key: 'pengumuman', label: 'Pengumuman',   icon: 'fa-bullhorn' },
     ];
 
-    // Label untuk heading
     const headingText = () => {
         const catLabel = CAT_META[kategori]?.label;
         if (query && catLabel)  return <>Hasil "<span style={{ color: 'var(--teal-300)' }}>{query}</span>" di {catLabel}</>;
@@ -244,7 +371,6 @@ export default function Search() {
         return 'Cari Informasi Purbalingga';
     };
 
-    // Teks ringkasan jumlah hasil
     const summaryText = () => {
         const catLabel = CAT_META[kategori]?.label;
         if (query && catLabel)  return `Ditemukan ${results.length} hasil untuk "${query}" di ${catLabel}`;
@@ -255,6 +381,7 @@ export default function Search() {
 
     return (
         <div style={{ paddingTop: 90, paddingBottom: 80, background: 'var(--cream)', minHeight: '100vh' }}>
+            <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
 
             {/* ── Search Header ── */}
             <div style={{ background: 'linear-gradient(135deg, var(--teal-800), var(--teal-950))', padding: '48px 0 40px' }}>
@@ -275,7 +402,7 @@ export default function Search() {
                                 onChange={(e) => setInputVal(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && doSearch()}
                                 placeholder="Ketik kata kunci..."
-                                style={{ flex: 1, background: 'transparent', border: 'none', padding: '14px 24px', fontSize: 16, outline: 'none', color:'white' }}
+                                style={{ flex: 1, background: 'transparent', border: 'none', padding: '14px 24px', fontSize: 16, outline: 'none', color: 'white' }}
                             />
                             {inputVal && (
                                 <button
@@ -308,7 +435,8 @@ export default function Search() {
                             </div>
                             {kategoriList.map((k) => {
                                 const isActive = kategori === k.key;
-                                const count    = countByKat(query, k.key);
+                                // Gunakan filteredCounts (hasil filter query tapi tanpa filter kategori)
+                                const count = filteredCounts[k.key] ?? 0;
                                 return (
                                     <button
                                         key={k.key}
@@ -333,33 +461,50 @@ export default function Search() {
                                             color: isActive ? 'white' : 'var(--text-muted)',
                                             borderRadius: 50, padding: '2px 8px', minWidth: 24, textAlign: 'center',
                                         }}>
-                                            {count}
+                                            {dataReady ? count : '...'}
                                         </span>
                                     </button>
                                 );
                             })}
                         </div>
+
+                        {/* Error notice */}
+                        {fetchError && (
+                            <div style={{ marginTop: 12, padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, fontSize: 13, color: '#dc2626', display: 'flex', gap: 8 }}>
+                                <i className="fas fa-exclamation-circle" style={{ marginTop: 2 }} />
+                                Gagal memuat data dari server.
+                            </div>
+                        )}
                     </aside>
 
                     {/* ── Hasil ── */}
                     <div>
                         {/* Ringkasan */}
-                        {results.length > 0 && (
+                        {dataReady && results.length > 0 && (
                             <div style={{ marginBottom: 20, fontSize: 14, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <i className="fas fa-info-circle" style={{ color: 'var(--teal-500)' }} />
                                 {summaryText()}
                             </div>
                         )}
 
-                        {/* Daftar hasil / empty state */}
-                        {results.length === 0 ? (
-                            <EmptyState query={query} kategori={kategori} />
-                        ) : (
+                        {/* Loading skeletons */}
+                        {!dataReady && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                {results.map((r, i) => (
-                                    <ResultCard key={i} result={r} query={query} />
-                                ))}
+                                {[...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
                             </div>
+                        )}
+
+                        {/* Hasil / empty */}
+                        {dataReady && (
+                            results.length === 0
+                                ? <EmptyState query={query} kategori={kategori} />
+                                : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                        {results.map((r, i) => (
+                                            <ResultCard key={`${r.type}-${r.id ?? i}`} result={r} query={query} />
+                                        ))}
+                                    </div>
+                                )
                         )}
                     </div>
                 </div>

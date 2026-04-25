@@ -594,7 +594,7 @@ export default function KelolaWisata() {
 
   const statusClass = (s) => s === "aktif" ? "aktif" : s === "nonaktif" ? "nonaktif" : "draft";
 
-  const kecamatanName = (id) => kecamatanList.find((k) => k.id == id)?.nama_kecamatan || "—";
+  const kecamatanName = (id) => kecamatanList.find((k) => k.id == id)?.nama || "—";
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -802,7 +802,7 @@ export default function KelolaWisata() {
                   <label className="kw-label"><i className="fa-solid fa-location-dot" /> Kecamatan <span className="kw-required">*</span></label>
                   <select className={`kw-select${formErr.kecamatan_id ? " error" : ""}`} value={form.kecamatan_id} onChange={(e) => handleFormChange("kecamatan_id", e.target.value)}>
                     <option value="">— Pilih Kecamatan —</option>
-                    {kecamatanList.map((k) => <option key={k.id} value={k.id}>{k.nama_kecamatan}</option>)}
+                    {kecamatanList.map((k) => <option key={k.id} value={k.id}>{k.nama}</option>)}
                   </select>
                   {formErr.kecamatan_id && <span className="kw-error-msg"><i className="fa-solid fa-circle-exclamation" />{formErr.kecamatan_id}</span>}
                 </div>

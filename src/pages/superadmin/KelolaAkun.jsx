@@ -383,11 +383,11 @@ const css = `
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
-const ROLES = ["superadmin", "admin", "staff_wisata"];
+const ROLES = ["superadmin", "user", "admin"];
 const PER_PAGE = 10;
 
 const EMPTY_FORM = {
-  email: "", username: "", name: "", password: "", role: "staff_wisata", wisata_id: "",
+  email: "", username: "", name: "", password: "", role: "admin", wisata_id: "",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -428,8 +428,8 @@ export default function KelolaAkun() {
     setLoading(true);
     try {
       const [accRes, wisRes] = await Promise.all([
-        api.get("/superadmin/akun"),    // GET semua akun
-        api.get("/superadmin/wisata"),  // GET semua wisata untuk dropdown
+        api.get("/super-admin/akun"),    // GET semua akun
+        api.get("/super-admin/wisata"),  // GET semua wisata untuk dropdown
       ]);
       setAccounts(accRes.data.data || accRes.data || []);
       setWisataList(wisRes.data.data || wisRes.data || []);
@@ -467,13 +467,13 @@ export default function KelolaAkun() {
   // ── Stats ──────────────────────────────────────────────────────────────────
   const total      = accounts.length;
   const superCount = accounts.filter((a) => a.role === "superadmin").length;
-  const adminCount = accounts.filter((a) => a.role === "admin").length;
-  const staffCount = accounts.filter((a) => a.role === "staff_wisata").length;
+  const userCount = accounts.filter((a) => a.role === "user").length;
+  const staffCount = accounts.filter((a) => a.role === "admin").length;
 
   const stats = [
     { icon: "fa-solid fa-users", label: "Total Akun",     num: total,      color: "var(--teal-600)", bg: "var(--teal-50)" },
     { icon: "fa-solid fa-crown", label: "Super Admin",    num: superCount, color: "#92400e",          bg: "rgba(212,168,83,.12)" },
-    { icon: "fa-solid fa-user-tie", label: "Admin",       num: adminCount, color: "var(--teal-700)", bg: "var(--teal-100)" },
+    { icon: "fa-solid fa-user-tie", label: "User",       num: userCount, color: "var(--teal-700)", bg: "var(--teal-100)" },
     { icon: "fa-solid fa-mountain-sun", label: "Staff Wisata", num: staffCount, color: "#15803d",    bg: "#f0fdf4" },
   ];
 
@@ -493,7 +493,7 @@ export default function KelolaAkun() {
       username: acc.username || "",
       name: acc.name || "",
       password: "",
-      role: acc.role || "staff_wisata",
+      role: acc.role || "admin",
       wisata_id: acc.wisata_id || "",
     });
     setFormErr({});
@@ -516,7 +516,7 @@ export default function KelolaAkun() {
     if (!form.username.trim()) err.username = "Username wajib diisi.";
     if (!form.name.trim())     err.name     = "Nama lengkap wajib diisi.";
     if (!editTarget && !form.password.trim()) err.password = "Password wajib diisi untuk akun baru.";
-    if (form.role === "staff_wisata" && !form.wisata_id) err.wisata_id = "Pilih destinasi wisata.";
+    if (form.role === "admin" && !form.wisata_id) err.wisata_id = "Pilih destinasi wisata.";
     return err;
   };
 
@@ -528,18 +528,18 @@ export default function KelolaAkun() {
     try {
       const payload = { ...form };
       if (!payload.password) delete payload.password;
-      if (payload.role !== "staff_wisata") delete payload.wisata_id;
+      if (payload.role !== "admin") delete payload.wisata_id;
 
       if (editTarget) {
         // PUT /api/superadmin/akun/{id}
-        await api.put(`/superadmin/akun/${editTarget.id}`, payload);
+        await api.put(`/super-admin/akun/${editTarget.id}`, payload);
         setAccounts((prev) =>
           prev.map((a) => (a.id === editTarget.id ? { ...a, ...payload, wisata: wisataList.find((w) => w.id == payload.wisata_id) } : a))
         );
         showToast(`Akun "${payload.name}" berhasil diperbarui.`);
       } else {
         // POST /api/superadmin/akun
-        const res = await api.post("/superadmin/akun", payload);
+        const res = await api.post("/super-admin/akun", payload);
         const newAcc = res.data.data || res.data;
         setAccounts((prev) => [newAcc, ...prev]);
         showToast(`Akun "${payload.name}" berhasil ditambahkan.`);
@@ -559,7 +559,7 @@ export default function KelolaAkun() {
     setConfirmDel(null);
     setDeleting(true);
     try {
-      await api.delete(`/superadmin/akun/${acc.id}`);
+      await api.delete(`/super-admin/akun/${acc.id}`);
       setAccounts((prev) => prev.filter((a) => a.id !== acc.id));
       showToast(`Akun "${acc.name}" berhasil dihapus.`);
     } catch {
@@ -571,13 +571,13 @@ export default function KelolaAkun() {
 
   // ── Role helpers ───────────────────────────────────────────────────────────
   const roleLabel = (r) =>
-    r === "superadmin" ? "Super Admin" : r === "admin" ? "Admin" : "Staff Wisata";
+    r === "superadmin" ? "Super Admin" : r === "user" ? "User" : "Admin";
 
   const roleCls = (r) =>
-    r === "superadmin" ? "ka-role--superadmin" : r === "admin" ? "ka-role--admin" : "ka-role--staff";
+    r === "superadmin" ? "ka-role--superadmin" : r === "user" ? "ka-role--admin" : "ka-role--staff";
 
   const roleIcon = (r) =>
-    r === "superadmin" ? "fa-crown" : r === "admin" ? "fa-user-tie" : "fa-mountain-sun";
+    r === "superadmin" ? "fa-crown" : r === "user" ? "fa-user-tie" : "fa-mountain-sun";
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -622,17 +622,6 @@ export default function KelolaAkun() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-          </div>
-          <div className="ka-filter-tabs">
-            {["semua", "superadmin", "admin", "staff_wisata"].map((r) => (
-              <button
-                key={r}
-                className={`ka-filter-tab${filterRole === r ? " active" : ""}`}
-                onClick={() => setFilter(r)}
-              >
-                {r === "semua" ? "Semua" : roleLabel(r)}
-              </button>
-            ))}
           </div>
           <button className="ka-add-btn" onClick={openAdd}>
             <i className="fa-solid fa-plus" />
@@ -892,8 +881,8 @@ export default function KelolaAkun() {
                 </select>
               </div>
 
-              {/* Nama Wisata — tampil hanya kalau role staff_wisata */}
-              {form.role === "staff_wisata" && (
+              {/* Nama Wisata — tampil hanya kalau role admin */}
+              {form.role === "admin" && (
                 <div className="ka-field">
                   <label className="ka-label">
                     <i className="fa-solid fa-mountain-sun" />

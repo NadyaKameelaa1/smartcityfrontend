@@ -17,7 +17,7 @@ function normalizeEvent(e) {
     const gambar = e.thumbnail
         ? e.thumbnail.startsWith('http')
             ? e.thumbnail
-            : `${import.meta.env.VITE_APP_URL ?? 'http://smartcitybackend-main-oqgeeg.free.laravel.cloud'}/storage/event/${e.thumbnail}` : 'https://placehold.co/640x480?text=No+Image';
+            : `${import.meta.env.VITE_APP_URL ?? 'http://localhost:8000'}/storage/event/${e.thumbnail}` : 'https://placehold.co/640x480?text=No+Image';
  
     return {
         id:              e.id,

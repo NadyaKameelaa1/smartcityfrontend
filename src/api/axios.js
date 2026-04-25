@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+const currentHost = window.location.hostname;
+
 const api = axios.create({
-    baseURL: 'https://smartcitybackend-main-oqgeeg.free.laravel.cloud/api', 
+    baseURL: `http://${currentHost}:8000/api`,
     headers: {
         'X-Requested-With': 'XMLHttpRequest',
         'Accept': 'application/json',

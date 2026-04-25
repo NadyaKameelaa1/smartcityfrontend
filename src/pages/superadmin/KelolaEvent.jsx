@@ -419,8 +419,8 @@ export default function KelolaEvent() {
     setLoading(true);
     try {
       const [eRes, kRes] = await Promise.all([
-        api.get("/superadmin/event"),
-        api.get("/superadmin/kecamatan"),
+        api.get("/super-admin/event"),
+        api.get("/super-admin/kecamatan"),
       ]);
       setEventList(eRes.data.data || eRes.data || []);
       setKecamatanList(kRes.data.data || kRes.data || []);
@@ -469,7 +469,7 @@ export default function KelolaEvent() {
 
   // ── Kecamatan name lookup ──
   const kecamatanName = (id) =>
-    kecamatanList.find((k) => k.id == id)?.nama_kecamatan || "—";
+    kecamatanList.find((k) => k.id == id)?.nama|| "—";
 
   // ── Modal ──
   const openAdd = () => {
@@ -542,7 +542,7 @@ export default function KelolaEvent() {
 
       if (editTarget) {
         fd.append("_method", "PUT");
-        await api.post(`/superadmin/event/${editTarget.id}`, fd, {
+        await api.post(`/super-admin/event/${editTarget.id}`, fd, {
           headers: { "Content-Type": "multipart/form-data" },
         });
         setEventList((prev) =>
@@ -554,7 +554,7 @@ export default function KelolaEvent() {
         );
         showToast(`Event "${form.nama}" berhasil diperbarui.`);
       } else {
-        const res = await api.post("/superadmin/event", fd, {
+        const res = await api.post("/super-admin/event", fd, {
           headers: { "Content-Type": "multipart/form-data" },
         });
         setEventList((prev) => [res.data.data || res.data, ...prev]);
@@ -573,7 +573,7 @@ export default function KelolaEvent() {
     const ev = confirmDel;
     setConfirmDel(null);
     try {
-      await api.delete(`/superadmin/event/${ev.id}`);
+      await api.delete(`/super-admin/event/${ev.id}`);
       setEventList((prev) => prev.filter((e) => e.id !== ev.id));
       showToast(`Event "${ev.nama}" berhasil dihapus.`);
     } catch {
@@ -584,7 +584,7 @@ export default function KelolaEvent() {
   // ── Inline status update ──
   const handleStatusChange = async (id, newStatus) => {
     try {
-      await api.patch(`/superadmin/event/${id}/status`, { status: newStatus });
+      await api.patch(`/super-admin/event/${id}/status`, { status: newStatus });
       setEventList((prev) =>
         prev.map((ev) => (ev.id === id ? { ...ev, status: newStatus } : ev))
       );
@@ -1063,7 +1063,7 @@ export default function KelolaEvent() {
                   >
                     <option value="">— Pilih Kecamatan —</option>
                     {kecamatanList.map((k) => (
-                      <option key={k.id} value={k.id}>{k.nama_kecamatan}</option>
+                      <option key={k.id} value={k.id}>{k.nama}</option>
                     ))}
                   </select>
                   {formErr.kecamatan_id && (

@@ -15,7 +15,7 @@ const formatJam = (jam) => {
     return jam.substring(0, 5).replace(':', '.');
 };
 
-const BASE_IMAGE_URL = 'https://smartcitybackend-main-oqgeeg.free.laravel.cloud/storage/';
+const BASE_IMAGE_URL = 'http://localhost:8000/storage/';
 
 export default function WisataDetail() {
     const { slug }   = useParams();
@@ -523,8 +523,8 @@ export default function WisataDetail() {
                                 <Link to={`/tiket?id=${w.id}`} className="wd-btn-primary">
                                     <i className="fas fa-shopping-cart" /> Beli Tiket Sekarang
                                 </Link>
-                                <Link 
-                                    to={`/peta?nama=${encodeURIComponent(w.nama)}&lat=${w.marker?.lat}&lng=${w.marker?.lng}`} 
+                                <Link
+                                    to={`/peta?nama=${encodeURIComponent(w.nama)}&lat=${w.marker?.lat ?? w.lat}&lng=${w.marker?.lng ?? w.lng}&open=1`}
                                     className="wd-btn-ghost"
                                 >
                                     <i className="fas fa-map-marked-alt" /> Lihat di Peta

@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const formatRupiah = (n) => 'Rp ' + (n || 0).toLocaleString('id-ID');
 
 // Base URL untuk gambar dari Laravel
-const BASE_IMAGE_URL = 'http://192.168.40.128:8000/storage/';
+const BASE_IMAGE_URL = 'http://localhost:8000/storage/';
 
 export default function WisataCard({ w }) {
     const navigate = useNavigate();
